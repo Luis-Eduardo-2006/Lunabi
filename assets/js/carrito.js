@@ -145,6 +145,12 @@
   function sendWhatsAppOrder() {
     const msg = buildWhatsAppOrder();
     if (!msg) return;
+    // Registrar la venta antes de abrir WhatsApp. Esto alimenta los
+    // badges de "Más vendido" que se recomputan dinámicamente según
+    // la acumulación de pedidos.
+    if (typeof window.recordSales === 'function') {
+      window.recordSales(cart);
+    }
     const waNumber = window.WA_NUMBER || '51XXXXXXXXX';
     window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
   }

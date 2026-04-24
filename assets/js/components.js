@@ -469,5 +469,21 @@
   // Auto-run at script load so main.js can wire handlers to injected elements.
   injectComponents();
 
+  /* Carga diferida del módulo SkinTest (botón flotante con logo + modal de
+   * test dermatológico). Se inyecta CSS y JS dinámicamente para que esté
+   * disponible en todas las páginas sin tener que editar cada HTML. */
+  (function loadSkinTest() {
+    if (document.getElementById('luSkinTestCss')) return;
+    const link = document.createElement('link');
+    link.id = 'luSkinTestCss';
+    link.rel = 'stylesheet';
+    link.href = 'assets/css/skintest.css';
+    document.head.appendChild(link);
+    const script = document.createElement('script');
+    script.src = 'assets/js/skintest.js';
+    script.defer = true;
+    document.head.appendChild(script);
+  })();
+
   window.injectComponents = injectComponents;
 })();

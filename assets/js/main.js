@@ -9,6 +9,86 @@
 window.WA_NUMBER = '51XXXXXXXXX';
 
 /* ================================================================ */
+/* VENTAS + BEST-SELLERS DINÁMICOS                                  */
+/* ================================================================ */
+/* Cada vez que se envía un pedido por WhatsApp, carrito.js llama a
+ * `recordSales(cart)` con el array de items. Acumulamos cantidades por
+ * producto en localStorage['lunabi_ventas'] y luego recalculamos qué
+ * productos llevan el badge `masVendido` (los K con más ventas).
+ *
+ * Si todavía no hay ventas registradas, mantenemos los flags originales
+ * que trae data.js (para que la demo no luzca vacía desde el día 0).
+ *
+ * Cuando llegue el backend: reemplazar get/save por fetch a /api/ventas. */
+(function() {
+  const KEY = 'lunabi_ventas';
+  function loadSales() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+  function saveSales(map) {
+    try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (e) { /* cuota llena */ }
+  }
+
+  /* `originalFlags` guarda el valor de masVendido que trae cada producto
+   * desde data.js o desde el form del admin, antes de que sales lo pisen.
+   * Se usa como fallback cuando todavía no hay ventas registradas. */
+  const originalFlags = {};
+  function captureOriginalFlags() {
+    (window.products || []).forEach(p => {
+      if (!(p.id in originalFlags)) originalFlags[p.id] = !!p.masVendido;
+    });
+  }
+
+  function recomputeBestSellers() {
+    captureOriginalFlags();
+    const ps = window.products || [];
+    if (!ps.length) return;
+    const sales = loadSales();
+    const withSales = ps.filter(p => (Number(sales[p.id]) || 0) > 0);
+    if (!withSales.length) {
+      // Sin ventas aún → respeta los masVendido originales de data.js
+      ps.forEach(p => { p.masVendido = !!originalFlags[p.id]; });
+      return;
+    }
+    // K adaptable: al menos 3, máx 8, ~15% del catálogo.
+    const K = Math.max(3, Math.min(8, Math.ceil(ps.length * 0.15)));
+    const topIds = new Set(
+      [...withSales]
+        .sort((a, b) => (Number(sales[b.id]) || 0) - (Number(sales[a.id]) || 0))
+        .slice(0, K)
+        .map(p => p.id)
+    );
+    ps.forEach(p => { p.masVendido = topIds.has(p.id); });
+  }
+
+  window.getSalesMap = loadSales;
+  window.getProductSales = (id) => Number(loadSales()[Number(id)]) || 0;
+
+  window.recordSales = function(items) {
+    if (!Array.isArray(items) || !items.length) return;
+    const map = loadSales();
+    items.forEach(({ id, qty }) => {
+      const n = Number(id);
+      if (!n) return;
+      map[n] = (Number(map[n]) || 0) + (Number(qty) || 0);
+    });
+    saveSales(map);
+    recomputeBestSellers();
+    // Si la página está visible, re-render inmediato del grid activo.
+    if (typeof window.refreshBestSellerViews === 'function') {
+      window.refreshBestSellerViews();
+    }
+  };
+
+  window.recomputeBestSellers = recomputeBestSellers;
+
+  // Ejecución inicial — cuando este script corre, data.js y los overrides
+  // de admin ya están aplicados en `products`.
+  recomputeBestSellers();
+})();
+
+/* ================================================================ */
 /* FAVORITOS (corazón en cards)                                     */
 /* ================================================================ */
 /* Persiste en localStorage['lunabi_favs'] como arreglo de IDs numéricos.
@@ -339,6 +419,39 @@ function initEffects() {
 function initHero() {
   const carousel = document.getElementById('heroBannerCarousel');
   if (!carousel) return;
+
+  /* Si el admin definió diapositivas personalizadas, reemplaza el markup
+   * por defecto. Cada slide lleva imagen de fondo, badge opcional, título,
+   * descripción y CTA con texto y link propios. */
+  let adminSlides = [];
+  try {
+    adminSlides = (typeof window.getAdminSlides === 'function')
+      ? window.getAdminSlides()
+      : JSON.parse(localStorage.getItem('lunabi_admin_slides') || '[]');
+  } catch (e) { adminSlides = []; }
+  if (Array.isArray(adminSlides) && adminSlides.length) {
+    const safe = s => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const indicators = adminSlides.map((_, i) =>
+      `<button type="button" data-bs-target="#heroBannerCarousel" data-bs-slide-to="${i}" ${i === 0 ? 'class="active"' : ''}></button>`
+    ).join('');
+    const items = adminSlides.map((s, i) => `
+      <div class="carousel-item ${i === 0 ? 'active' : ''}">
+        <div class="hero-slide hero-slide-${(i % 3) + 1}" style="background-image:url('${safe(s.imagen)}'); background-size:cover; background-position:center">
+          <div class="hero-content">
+            ${s.badge ? `<span class="hero-sale-badge">${safe(s.badge)}</span>` : ''}
+            <h1 class="hero-headline">${safe(s.titulo)}</h1>
+            <p>${safe(s.descripcion)}</p>
+            <a href="${safe(s.botonLink || '#')}" class="hero-cta">${safe(s.botonTexto || 'Ver más')}</a>
+          </div>
+        </div>
+      </div>`).join('');
+    const indWrap = carousel.querySelector('.carousel-indicators');
+    const inner = carousel.querySelector('.carousel-inner');
+    if (indWrap) indWrap.innerHTML = indicators;
+    if (inner) inner.innerHTML = items;
+  }
+
   function animateHeadline() {
     const activeSlide = carousel.querySelector('.carousel-item.active .hero-headline');
     if (!activeSlide) return;
@@ -699,6 +812,9 @@ function initApp() {
       break;
     case 'libro-reclamaciones':
       initReclamacionesForm();
+      break;
+    case 'admin':
+      if (typeof initAdmin === 'function') initAdmin();
       break;
     default:
       // nosotros / faq / terminos: no extra JS needed

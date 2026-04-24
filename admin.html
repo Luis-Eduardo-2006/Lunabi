@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="day">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Panel de administración de Lünabi: gestión de productos, carrusel y marcas.">
+  <title>Admin | Lünabi — Cosméticos Coreanos</title>
+  <link rel="icon" type="image/webp" href="img/logo/logofavicon.webp">
+  <link rel="apple-touch-icon" href="img/logo/logofavicon.webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,700;0,900&family=Syne:wght@700;800&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/navbar.css">
+  <link rel="stylesheet" href="assets/css/footer.css">
+  <link rel="stylesheet" href="assets/css/cards.css">
+  <link rel="stylesheet" href="assets/css/modal.css">
+  <link rel="stylesheet" href="assets/css/carrito.css">
+  <link rel="stylesheet" href="assets/css/auth.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body data-page="admin">
+
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+  </div>
+
+  <div id="navbar-container"></div>
+
+  <main id="main-content">
+    <section class="admin-page">
+      <div class="container">
+        <header class="admin-header fade-up">
+          <div>
+            <h1 class="admin-title">Panel de administración</h1>
+            <p class="admin-subtitle">Gestiona productos, carrusel principal y marcas desde un solo lugar.</p>
+          </div>
+          <div class="admin-header-actions">
+            <a href="index.html" class="admin-btn-secondary"><i class="bi bi-house-door"></i> Ver tienda</a>
+          </div>
+        </header>
+
+        <div class="admin-shell fade-up">
+          <aside class="admin-sidebar">
+            <button class="admin-tab active" data-tab="dashboard" type="button">
+              <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
+            </button>
+            <button class="admin-tab" data-tab="productos" type="button">
+              <i class="bi bi-box-seam"></i> <span>Productos</span>
+            </button>
+            <button class="admin-tab" data-tab="carrusel" type="button">
+              <i class="bi bi-images"></i> <span>Carrusel</span>
+            </button>
+            <button class="admin-tab" data-tab="marcas" type="button">
+              <i class="bi bi-tag"></i> <span>Marcas</span>
+            </button>
+          </aside>
+
+          <div class="admin-content">
+
+            <!-- ========== DASHBOARD ========== -->
+            <section class="admin-panel active" data-panel="dashboard">
+
+              <!-- Welcome + health ring -->
+              <div class="admin-welcome">
+                <div class="admin-welcome-left">
+                  <span class="admin-kicker"><i class="bi bi-stars"></i> Panel Lünabi</span>
+                  <h2 class="admin-welcome-title" id="adminGreeting">Hola</h2>
+                  <p class="admin-welcome-sub" id="adminWelcomeSub">Aquí tienes un resumen en vivo del estado de tu tienda.</p>
+                  <div class="admin-welcome-meta">
+                    <span class="admin-chip"><i class="bi bi-calendar3"></i> <span id="chipDate">—</span></span>
+                    <span class="admin-chip admin-chip-health"><i class="bi bi-heart-pulse"></i> Salud del catálogo <strong id="chipHealth">—</strong></span>
+                  </div>
+                </div>
+                <div class="admin-welcome-right">
+                  <div class="admin-health-ring" role="img" aria-label="Salud del catálogo">
+                    <svg viewBox="0 0 140 140">
+                      <circle cx="70" cy="70" r="58" class="admin-health-track"/>
+                      <circle cx="70" cy="70" r="58" class="admin-health-value" id="healthRingCircle" stroke-dasharray="364.4" stroke-dashoffset="364.4"/>
+                    </svg>
+                    <div class="admin-health-ring-label">
+                      <span class="admin-health-ring-value" id="healthRingValue">0%</span>
+                      <span class="admin-health-ring-caption">Completitud</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Primary KPI cards (colored) -->
+              <div class="admin-stats-grid">
+                <div class="admin-stat stat-c1">
+                  <div class="admin-stat-icon"><i class="bi bi-box-seam"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">Productos</span>
+                    <span class="admin-stat-value" id="statProducts" data-count="0">0</span>
+                    <span class="admin-stat-trend" id="statProductsTrend"></span>
+                  </div>
+                </div>
+                <div class="admin-stat stat-c2">
+                  <div class="admin-stat-icon"><i class="bi bi-tag"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">Marcas</span>
+                    <span class="admin-stat-value" id="statBrands" data-count="0">0</span>
+                    <span class="admin-stat-trend" id="statBrandsTrend"></span>
+                  </div>
+                </div>
+                <div class="admin-stat stat-c3">
+                  <div class="admin-stat-icon"><i class="bi bi-star-fill"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">Más vendidos</span>
+                    <span class="admin-stat-value" id="statBest" data-count="0">0</span>
+                    <span class="admin-stat-trend" id="statBestPct"></span>
+                  </div>
+                </div>
+                <div class="admin-stat stat-c4">
+                  <div class="admin-stat-icon"><i class="bi bi-percent"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">En oferta</span>
+                    <span class="admin-stat-value" id="statSale" data-count="0">0</span>
+                    <span class="admin-stat-trend" id="statSalePct"></span>
+                  </div>
+                </div>
+                <div class="admin-stat stat-c5">
+                  <div class="admin-stat-icon"><i class="bi bi-cash-coin"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">Valor del catálogo</span>
+                    <span class="admin-stat-value" id="statTotalValue" data-format="currency" data-count="0">S/ 0.00</span>
+                    <span class="admin-stat-trend" id="statAvgPrice">S/ 0.00 promedio</span>
+                  </div>
+                </div>
+                <div class="admin-stat stat-c6">
+                  <div class="admin-stat-icon"><i class="bi bi-arrow-down-right-circle"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">Descuento total</span>
+                    <span class="admin-stat-value" id="statDiscountValue" data-format="currency" data-count="0">S/ 0.00</span>
+                    <span class="admin-stat-trend" id="statDiscountAvg"></span>
+                  </div>
+                </div>
+                <div class="admin-stat stat-c7">
+                  <div class="admin-stat-icon"><i class="bi bi-images"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">Diapositivas</span>
+                    <span class="admin-stat-value" id="statSlides" data-count="0">0</span>
+                    <span class="admin-stat-trend" id="statSlidesHint"></span>
+                  </div>
+                </div>
+                <div class="admin-stat stat-c8">
+                  <div class="admin-stat-icon"><i class="bi bi-people"></i></div>
+                  <div class="admin-stat-body">
+                    <span class="admin-stat-label">Usuarios</span>
+                    <span class="admin-stat-value" id="statUsers" data-count="0">0</span>
+                    <span class="admin-stat-trend">registrados</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Category + brand distribution -->
+              <div class="admin-row">
+                <div class="admin-card">
+                  <h3><i class="bi bi-bar-chart-line"></i> Distribución por categoría</h3>
+                  <div class="admin-chart" id="chartByCategory"></div>
+                </div>
+                <div class="admin-card">
+                  <h3><i class="bi bi-award"></i> Top marcas por productos</h3>
+                  <div class="admin-chart" id="chartByBrand"></div>
+                </div>
+              </div>
+
+              <!-- Smart: price distribution + skin type coverage -->
+              <div class="admin-row">
+                <div class="admin-card">
+                  <h3><i class="bi bi-cash-stack"></i> Distribución de precios</h3>
+                  <div class="admin-chart" id="chartPriceBuckets"></div>
+                </div>
+                <div class="admin-card">
+                  <h3><i class="bi bi-droplet-half"></i> Cobertura por tipo de piel</h3>
+                  <div class="admin-chart" id="chartSkinTypes"></div>
+                </div>
+              </div>
+
+              <!-- Smart: insights + attention -->
+              <div class="admin-row">
+                <div class="admin-card">
+                  <h3><i class="bi bi-lightbulb"></i> Insights del catálogo</h3>
+                  <div class="admin-insights" id="insightsList"></div>
+                </div>
+                <div class="admin-card admin-card-alert">
+                  <h3><i class="bi bi-exclamation-circle"></i> Necesita atención</h3>
+                  <div class="admin-attention" id="attentionList"></div>
+                </div>
+              </div>
+
+              <!-- Latest -->
+              <div class="admin-card">
+                <h3><i class="bi bi-clock-history"></i> Últimos productos agregados</h3>
+                <div class="admin-latest" id="latestProducts"></div>
+              </div>
+            </section>
+
+            <!-- ========== PRODUCTOS ========== -->
+            <section class="admin-panel" data-panel="productos">
+              <h2 class="admin-panel-title">Productos</h2>
+              <p class="admin-hint">Añade productos al catálogo con toda su clasificación. Los productos quedan guardados en el navegador (localStorage) y se muestran en toda la tienda.</p>
+
+              <form id="productForm" class="admin-form" method="post" action="#" novalidate>
+                <h3 class="admin-form-title"><i class="bi bi-plus-circle"></i> Nuevo producto</h3>
+
+                <div class="admin-grid-2">
+                  <label class="admin-field">
+                    <span>Nombre</span>
+                    <input type="text" name="nombre" required placeholder="Ej. Glow Deep Serum">
+                  </label>
+                  <label class="admin-field">
+                    <span>Slug (automático)</span>
+                    <input type="text" name="slug" readonly placeholder="Se genera automáticamente del nombre" class="admin-field-auto">
+                    <small class="admin-hint-inline">Usado en la URL: <code>producto.html?id=&hellip;</code> — se deriva del nombre y se garantiza único.</small>
+                  </label>
+                  <label class="admin-field">
+                    <span>Marca</span>
+                    <select name="marca" required></select>
+                  </label>
+                  <label class="admin-field">
+                    <span>Categoría</span>
+                    <select name="categoria" required></select>
+                  </label>
+                  <label class="admin-field">
+                    <span>Subcategoría</span>
+                    <select name="subcategoria"><option value="">— Ninguna —</option></select>
+                  </label>
+                  <label class="admin-field">
+                    <span>Precio (S/)</span>
+                    <input type="number" name="precio" step="0.01" min="0" required placeholder="80.00">
+                  </label>
+                  <label class="admin-field">
+                    <span>Precio antes (opcional)</span>
+                    <input type="number" name="precioAntes" step="0.01" min="0" placeholder="Para mostrar descuento">
+                  </label>
+                </div>
+
+                <fieldset class="admin-fieldset">
+                  <legend>Tipo de piel</legend>
+                  <div class="admin-checks">
+                    <label><input type="checkbox" name="tipoPiel" value="normal"> Normal</label>
+                    <label><input type="checkbox" name="tipoPiel" value="mixta"> Mixta</label>
+                    <label><input type="checkbox" name="tipoPiel" value="grasa"> Grasa</label>
+                    <label><input type="checkbox" name="tipoPiel" value="seca"> Seca</label>
+                    <label><input type="checkbox" name="tipoPiel" value="sensible"> Sensible</label>
+                  </div>
+                </fieldset>
+
+                <label class="admin-field">
+                  <span>Descripción general</span>
+                  <textarea name="descripcion" rows="3" required placeholder="Describe el producto, sus activos y promesa principal."></textarea>
+                </label>
+
+                <div class="admin-field">
+                  <span>Imágenes del carrusel del producto</span>
+                  <small class="admin-hint-inline">Pega una URL o sube un archivo. Al subir se abre un editor para ajustarla a formato 1:1. La primera imagen es la portada.</small>
+                  <div class="admin-repeater admin-repeater-images" id="imagesRepeater" data-kind="image" data-slot="product"></div>
+                  <button type="button" class="admin-btn-add" data-target="imagesRepeater" data-kind="image">
+                    <i class="bi bi-plus-lg"></i> Añadir imagen
+                  </button>
+                </div>
+
+                <label class="admin-field">
+                  <span>Modo de uso</span>
+                  <small class="admin-hint-inline">Escribe los pasos uno por línea — cada línea se muestra como un ítem en la ficha del producto.</small>
+                  <textarea name="modoDeUso" rows="4" placeholder="Limpia tu rostro con agua tibia&#10;Aplica 2-3 gotas en las palmas&#10;Presiona suavemente sobre el rostro"></textarea>
+                </label>
+
+                <label class="admin-field">
+                  <span>Beneficios</span>
+                  <small class="admin-hint-inline">Un beneficio por línea — se listan en la pestaña "Beneficios" del producto.</small>
+                  <textarea name="beneficios" rows="4" placeholder="Ilumina y unifica el tono de piel&#10;Reduce visiblemente manchas oscuras&#10;Hidratación ligera sin sensación grasa"></textarea>
+                </label>
+
+                <div class="admin-checks admin-checks-wide">
+                  <label><input type="checkbox" name="masVendido"> Producto viral</label>
+                  <label><input type="checkbox" name="enOferta"> En oferta</label>
+                </div>
+
+                <div class="admin-form-actions">
+                  <button type="submit" class="admin-btn-primary"><i class="bi bi-check-lg"></i> Guardar producto</button>
+                  <button type="reset" class="admin-btn-secondary">Limpiar</button>
+                </div>
+              </form>
+
+              <div class="admin-list-header">
+                <h3>Productos actuales (<span id="productsCount">0</span>)</h3>
+                <span class="admin-hint">Los marcados <span class="admin-tag-custom">admin</span> fueron creados desde este panel y pueden eliminarse.</span>
+              </div>
+              <div class="admin-table-wrap">
+                <table class="admin-table" id="productsTable">
+                  <thead>
+                    <tr>
+                      <th>ID</th><th>Nombre</th><th>Marca</th><th>Categoría</th><th>Precio</th><th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- ========== CARRUSEL ========== -->
+            <section class="admin-panel" data-panel="carrusel">
+              <h2 class="admin-panel-title">Carrusel de inicio</h2>
+              <p class="admin-hint">Cada diapositiva tiene imagen de fondo, título, descripción y botón con su texto y enlace. Cuando agregues diapositivas, reemplazarán al carrusel por defecto de la home.</p>
+
+              <form id="slideForm" class="admin-form" method="post" action="#" novalidate>
+                <h3 class="admin-form-title"><i class="bi bi-plus-circle"></i> Nueva diapositiva</h3>
+
+                <div class="admin-field">
+                  <span>Imagen de fondo</span>
+                  <small class="admin-hint-inline">Al subir se abre un editor para ajustarla al formato 16:9 del banner.</small>
+                  <div class="admin-image-input" data-slot="slide">
+                    <div class="admin-image-preview"></div>
+                    <input type="text" name="imagen" required placeholder="https:// o sube un archivo">
+                    <label class="admin-btn-upload" title="Subir imagen">
+                      <i class="bi bi-upload"></i>
+                      <input type="file" accept="image/*" hidden>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="admin-grid-2">
+                  <label class="admin-field">
+                    <span>Título (headline)</span>
+                    <input type="text" name="titulo" required placeholder="Ej. Nueva colección Skincare">
+                  </label>
+                  <label class="admin-field">
+                    <span>Badge opcional</span>
+                    <input type="text" name="badge" placeholder="SALE, NUEVO, etc.">
+                  </label>
+                </div>
+
+                <label class="admin-field">
+                  <span>Descripción</span>
+                  <textarea name="descripcion" rows="2" required placeholder="Frase corta debajo del título"></textarea>
+                </label>
+
+                <div class="admin-grid-2">
+                  <label class="admin-field">
+                    <span>Texto del botón</span>
+                    <input type="text" name="botonTexto" required placeholder="Ver ofertas">
+                  </label>
+                  <label class="admin-field">
+                    <span>Enlace del botón</span>
+                    <input type="text" name="botonLink" required placeholder="sale.html">
+                  </label>
+                </div>
+
+                <div class="admin-form-actions">
+                  <button type="submit" class="admin-btn-primary"><i class="bi bi-check-lg"></i> Agregar al carrusel</button>
+                  <button type="reset" class="admin-btn-secondary">Limpiar</button>
+                </div>
+              </form>
+
+              <div class="admin-list-header">
+                <h3>Diapositivas activas</h3>
+                <button class="admin-btn-ghost" id="resetSlidesBtn" type="button"><i class="bi bi-arrow-counterclockwise"></i> Volver al carrusel por defecto</button>
+              </div>
+              <div id="slidesList" class="admin-slides-list"></div>
+            </section>
+
+            <!-- ========== MARCAS ========== -->
+            <section class="admin-panel" data-panel="marcas">
+              <h2 class="admin-panel-title">Marcas</h2>
+              <p class="admin-hint">Añade marcas nuevas para poder asignarlas a los productos y para que aparezcan en el mega-menú de Marcas.</p>
+
+              <form id="brandForm" class="admin-form" method="post" action="#" novalidate>
+                <h3 class="admin-form-title"><i class="bi bi-plus-circle"></i> Nueva marca</h3>
+                <div class="admin-grid-2">
+                  <label class="admin-field">
+                    <span>Nombre</span>
+                    <input type="text" name="nombre" required placeholder="Ej. Beauty of Joseon">
+                  </label>
+                  <label class="admin-field">
+                    <span>Slug</span>
+                    <input type="text" name="slug" placeholder="se genera del nombre">
+                  </label>
+                </div>
+                <div class="admin-field">
+                  <span>Logo</span>
+                  <small class="admin-hint-inline">Al subir se abre un editor con marco circular 1:1 para centrar el logo.</small>
+                  <div class="admin-image-input" data-slot="brand">
+                    <div class="admin-image-preview admin-image-preview-circle"></div>
+                    <input type="text" name="logo" required placeholder="https:// o sube un archivo">
+                    <label class="admin-btn-upload" title="Subir imagen">
+                      <i class="bi bi-upload"></i>
+                      <input type="file" accept="image/*" hidden>
+                    </label>
+                  </div>
+                </div>
+                <label class="admin-field">
+                  <span>Descripción</span>
+                  <textarea name="descripcion" rows="2" required placeholder="Descripción breve de la marca"></textarea>
+                </label>
+                <div class="admin-form-actions">
+                  <button type="submit" class="admin-btn-primary"><i class="bi bi-check-lg"></i> Guardar marca</button>
+                  <button type="reset" class="admin-btn-secondary">Limpiar</button>
+                </div>
+              </form>
+
+              <div class="admin-list-header">
+                <h3>Marcas actuales (<span id="brandsCount">0</span>)</h3>
+              </div>
+              <div class="admin-table-wrap">
+                <table class="admin-table" id="brandsTable">
+                  <thead>
+                    <tr>
+                      <th style="width:60px">Logo</th><th>Nombre</th><th>Slug</th><th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal-container"></div>
+  <div id="carrito-drawer"></div>
+  <div id="footer-container"></div>
+  <div id="toast-container"></div>
+
+  <!-- ========== IMAGE EDITOR MODAL ========== -->
+  <div class="modal fade admin-editor-modal" id="imageEditorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-crop"></i> Ajustar imagen</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="admin-editor-stage">
+            <div class="admin-editor-frame" id="editorFrame">
+              <img id="editorImg" alt="" draggable="false">
+              <span class="admin-editor-drag-hint">Arrastra para reposicionar</span>
+            </div>
+          </div>
+          <div class="admin-editor-controls">
+            <label class="admin-editor-zoom">
+              <i class="bi bi-zoom-out"></i>
+              <input type="range" id="editorZoom" min="1" max="4" step="0.01" value="1">
+              <i class="bi bi-zoom-in"></i>
+            </label>
+            <div class="admin-editor-buttons">
+              <button type="button" class="admin-btn-secondary" id="editorReset"><i class="bi bi-arrow-counterclockwise"></i> Reiniciar</button>
+              <button type="button" class="admin-btn-secondary" id="editorFit"><i class="bi bi-arrows-angle-contract"></i> Centrar</button>
+            </div>
+          </div>
+          <p class="admin-hint" id="editorSlotInfo">—</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="admin-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="admin-btn-primary" id="editorApply"><i class="bi bi-check-lg"></i> Aplicar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a href="https://wa.me/51XXXXXXXXX" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Escríbenos por WhatsApp">
+    <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    <span class="wa-tooltip">¡Escríbenos!</span>
+  </a>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/carrito.js"></script>
+  <script src="assets/js/buscador.js"></script>
+  <script src="assets/js/filtros.js"></script>
+  <script src="assets/js/router.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/admin.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

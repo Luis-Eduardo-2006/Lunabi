@@ -737,3 +737,30 @@ const products = [
     enOferta: true
   }
 ];
+
+/* ---------- Admin overrides (localStorage) ----------
+ * El panel admin en admin.html persiste productos y marcas nuevos en
+ * localStorage. Aquí se mezclan al catálogo base sin duplicar IDs, para
+ * que toda la tienda los vea al instante al recargar cualquier página. */
+(function() {
+  try {
+    const extraP = JSON.parse(localStorage.getItem('lunabi_admin_products') || '[]');
+    if (Array.isArray(extraP)) {
+      extraP.forEach(p => {
+        if (p && typeof p.id === 'number' && !products.find(q => q.id === p.id)) {
+          products.push(p);
+        }
+      });
+    }
+  } catch (e) { /* storage corrupt — ignore */ }
+  try {
+    const extraB = JSON.parse(localStorage.getItem('lunabi_admin_brands') || '[]');
+    if (Array.isArray(extraB)) {
+      extraB.forEach(b => {
+        if (b && typeof b.id === 'number' && !brands.find(x => x.id === b.id)) {
+          brands.push(b);
+        }
+      });
+    }
+  } catch (e) { /* storage corrupt — ignore */ }
+})();
