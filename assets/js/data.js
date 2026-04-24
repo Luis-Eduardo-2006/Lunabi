@@ -739,17 +739,27 @@ const products = [
 ];
 
 /* ---------- Admin overrides (localStorage) ----------
- * El panel admin en admin.html persiste productos y marcas nuevos en
- * localStorage. Aquí se mezclan al catálogo base sin duplicar IDs, para
- * que toda la tienda los vea al instante al recargar cualquier página. */
+ * El panel admin en admin.html persiste productos, marcas y diapositivas
+ * en localStorage. Aquí se mezclan al catálogo base con semántica "upsert":
+ *   - Si el id NO existe en base → se añade (producto/marca nuevo).
+ *   - Si el id YA existe → se reemplaza (edición del catálogo base).
+ * Así toda la tienda ve los cambios del admin al instante en cualquier
+ * página, incluyendo ediciones a productos/marcas originales.
+ *
+ * También capturamos los IDs máximos del catálogo base ANTES del merge
+ * para que el admin pueda distinguir entre "nuevo" y "editado". */
+window.__baseProductMaxId = products.reduce((m, p) => Math.max(m, p.id), 0);
+window.__baseBrandMaxId   = brands.reduce((m, b) => Math.max(m, b.id), 0);
+
 (function() {
   try {
     const extraP = JSON.parse(localStorage.getItem('lunabi_admin_products') || '[]');
     if (Array.isArray(extraP)) {
       extraP.forEach(p => {
-        if (p && typeof p.id === 'number' && !products.find(q => q.id === p.id)) {
-          products.push(p);
-        }
+        if (!p || typeof p.id !== 'number') return;
+        const idx = products.findIndex(q => q.id === p.id);
+        if (idx === -1) products.push(p);
+        else products[idx] = p;
       });
     }
   } catch (e) { /* storage corrupt — ignore */ }
@@ -757,9 +767,10 @@ const products = [
     const extraB = JSON.parse(localStorage.getItem('lunabi_admin_brands') || '[]');
     if (Array.isArray(extraB)) {
       extraB.forEach(b => {
-        if (b && typeof b.id === 'number' && !brands.find(x => x.id === b.id)) {
-          brands.push(b);
-        }
+        if (!b || typeof b.id !== 'number') return;
+        const idx = brands.findIndex(x => x.id === b.id);
+        if (idx === -1) brands.push(b);
+        else brands[idx] = b;
       });
     }
   } catch (e) { /* storage corrupt — ignore */ }

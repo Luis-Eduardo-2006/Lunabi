@@ -314,3 +314,148 @@ body.dark .cart-page-summary .summary-total { color: var(--p-pink-soft); }
   display: block;
   margin-bottom: 1rem;
 }
+
+/* ============================================================
+ * INLINE WA PICKER — se expande en el footer del carrito al
+ * clickear "Enviar pedido por WhatsApp". Sustituye al modal
+ * global en este contexto para que la UX sea más continua.
+ * ============================================================ */
+.cart-footer-primary {
+  display: contents;  /* permite que sus hijos participen en el grid del footer */
+}
+.cart-footer-primary[hidden] { display: none !important; }
+
+.cart-footer-wa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 0.6rem;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+.cart-footer-wa.is-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+.cart-footer-wa[hidden] { display: none; }
+
+.cart-wa-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px 4px;
+}
+.cart-wa-back {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.cart-wa-back:hover {
+  background: var(--p-lavender-light);
+  color: var(--p-purple-deep);
+  border-color: var(--p-purple-deep);
+}
+body.dark .cart-wa-back:hover {
+  background: rgba(247,198,249,0.15);
+  color: var(--p-pink-soft);
+  border-color: var(--p-pink-soft);
+}
+.cart-wa-head-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.cart-wa-head-text strong {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-heading);
+}
+.cart-wa-head-text small {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.cart-wa-option {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-border);
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  text-align: left;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  animation: cart-wa-in 0.3s ease;
+  animation-fill-mode: both;
+}
+.cart-wa-option:nth-child(2) { animation-delay: 0.05s; }
+.cart-wa-option:nth-child(3) { animation-delay: 0.12s; }
+@keyframes cart-wa-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cart-wa-option:hover {
+  border-color: #25D366;
+  background: rgba(37,211,102,0.06);
+  transform: translateY(-2px) translateX(2px);
+  box-shadow: 0 8px 22px rgba(37,211,102,0.22);
+}
+body.dark .cart-wa-option:hover { background: rgba(37,211,102,0.14); }
+
+.cart-wa-option-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37,211,102,0.35);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.cart-wa-option:hover .cart-wa-option-icon { transform: rotate(-6deg) scale(1.08); }
+.cart-wa-option[data-wa-key="nacional"] .cart-wa-option-icon {
+  background: linear-gradient(135deg, #7732D9, #F6C6F9);
+  box-shadow: 0 4px 12px rgba(119,50,217,0.35);
+}
+
+.cart-wa-option-body { display: flex; flex-direction: column; min-width: 0; }
+.cart-wa-option-label {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-heading);
+  line-height: 1.2;
+}
+.cart-wa-option-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+  margin-top: 1px;
+}
+.cart-wa-option-arrow {
+  font-size: 1.1rem;
+  color: var(--p-lila-mid);
+  transition: transform 0.22s, color 0.22s;
+}
+.cart-wa-option:hover .cart-wa-option-arrow {
+  color: #25D366;
+  transform: translateX(4px);
+}

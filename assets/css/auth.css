@@ -149,6 +149,7 @@ body.dark .user-menu hr { border-top-color: rgba(217,183,255,0.25); }
   cursor: pointer;
   transition: background 0.2s, color 0.2s, transform 0.2s;
   text-align: left;
+  text-decoration: none;
 }
 .user-menu-item:hover {
   background: var(--p-gray-warm);

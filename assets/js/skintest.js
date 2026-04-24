@@ -390,9 +390,24 @@
     updateProgress(pct, `Pregunta ${i + 1} de ${QUESTIONS.length}`);
   }
 
+  function persistResult(ans, routine) {
+    try {
+      const session = JSON.parse(localStorage.getItem('lunabi_session') || 'null');
+      const key = session && session.email ? session.email : 'guest';
+      const all = JSON.parse(localStorage.getItem('lunabi_skintest') || '{}');
+      all[key] = {
+        answers: ans,
+        productIds: routine.map(r => r.product.id),
+        createdAt: Date.now()
+      };
+      localStorage.setItem('lunabi_skintest', JSON.stringify(all));
+    } catch (e) { /* noop */ }
+  }
+
   function renderResult() {
     const ans = state.answers;
     const routine = buildRoutine(ans);
+    persistResult(ans, routine);
     updateProgress(100, '¡Rutina lista!');
 
     backBtn.disabled = false;

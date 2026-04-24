@@ -142,17 +142,77 @@
     return msg;
   }
 
+  function persistOrder() {
+    if (!cart.length) return null;
+    try {
+      const session = JSON.parse(localStorage.getItem('lunabi_session') || 'null');
+      const key = session && session.email ? session.email : 'guest';
+      const all = JSON.parse(localStorage.getItem('lunabi_orders') || '{}');
+      const list = Array.isArray(all[key]) ? all[key] : [];
+      const order = {
+        id: 'ORD-' + Date.now().toString(36).toUpperCase(),
+        createdAt: Date.now(),
+        items: cart.map(ci => {
+          const p = products.find(pr => pr.id === ci.id);
+          return {
+            id: ci.id,
+            qty: ci.qty,
+            nombre: p ? p.nombre : ('Producto #' + ci.id),
+            marca: p ? p.marca : '',
+            imagen: p && p.imagenes ? p.imagenes[0] : '',
+            precio: p ? Number(p.precio) : 0
+          };
+        }),
+        total: getCartTotal(),
+        status: 'pendiente'
+      };
+      list.unshift(order);
+      all[key] = list;
+      localStorage.setItem('lunabi_orders', JSON.stringify(all));
+      return order;
+    } catch (e) { return null; }
+  }
+
+  /* Alterna la vista "primaria" (botones Vaciar/Enviar) por la vista del
+   * picker inline (opciones Huancayo / Nacional). No dispara el envío
+   * todavía; eso ocurre cuando el usuario elige una de las dos opciones. */
+  function toggleCartWaPicker(showPicker) {
+    const primary = document.getElementById('cartFooterPrimary');
+    const picker  = document.getElementById('cartFooterWa');
+    if (!primary || !picker) return;
+    if (showPicker) {
+      primary.hidden = true;
+      picker.hidden = false;
+      requestAnimationFrame(() => picker.classList.add('is-open'));
+    } else {
+      picker.classList.remove('is-open');
+      // Dejamos terminar la transición antes de ocultar con [hidden]
+      setTimeout(() => {
+        picker.hidden = true;
+        primary.hidden = false;
+      }, 220);
+    }
+  }
+
   function sendWhatsAppOrder() {
+    if (!cart.length) return;
+    toggleCartWaPicker(true);
+  }
+
+  /* Llamado cuando el usuario clickea una de las dos opciones del picker
+   * inline. Registra el pedido y abre WhatsApp con el número elegido. */
+  function finalizeOrder(waKey) {
     const msg = buildWhatsAppOrder();
     if (!msg) return;
-    // Registrar la venta antes de abrir WhatsApp. Esto alimenta los
-    // badges de "Más vendido" que se recomputan dinámicamente según
-    // la acumulación de pedidos.
+    persistOrder();
     if (typeof window.recordSales === 'function') {
       window.recordSales(cart);
     }
-    const waNumber = window.WA_NUMBER || '51XXXXXXXXX';
-    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+    const numbers = window.WA_NUMBERS || {};
+    const n = (numbers[waKey] && numbers[waKey].number) || window.WA_NUMBER || '51XXXXXXXXX';
+    window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`, '_blank');
+    // Colapsamos el picker para la próxima vez
+    toggleCartWaPicker(false);
   }
 
   function initCart() {
@@ -170,6 +230,19 @@
       showToast('Carrito vaciado', 'info');
     });
     if (wa) wa.addEventListener('click', sendWhatsAppOrder);
+
+    // Picker inline de WhatsApp (Huancayo / Nacional) dentro del carrito
+    const waBack = document.getElementById('cartWaBack');
+    if (waBack) waBack.addEventListener('click', () => toggleCartWaPicker(false));
+
+    const waPicker = document.getElementById('cartFooterWa');
+    if (waPicker) {
+      waPicker.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-wa-key]');
+        if (!btn) return;
+        finalizeOrder(btn.getAttribute('data-wa-key'));
+      });
+    }
 
     updateCartUI();
   }

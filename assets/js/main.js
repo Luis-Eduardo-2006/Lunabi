@@ -6,7 +6,71 @@
  * wire listeners to elements inside them.
  */
 
-window.WA_NUMBER = '51XXXXXXXXX';
+/* ================================================================ */
+/* WHATSAPP: dos números (local + nacional)                         */
+/* ================================================================ */
+/* Cada CTA de WhatsApp abre un modal que deja elegir según la ubicación:
+ *   - local    → clientas de Lima y alrededores (atención + delivery).
+ *   - nacional → clientas de provincias (envíos nacionales).
+ * Para cambiar los números, edita el bloque de abajo. */
+window.WA_NUMBERS = {
+  local: {
+    number: '51XXXXXXXXX',
+    label:  'Huancayo y alrededores',
+    hint:   'Atención directa y delivery local',
+    icon:   'bi-geo-alt-fill'
+  },
+  nacional: {
+    number: '51YYYYYYYYY',
+    label:  'Envíos nacionales',
+    hint:   'Otras regiones del Perú — pedido anticipado',
+    icon:   'bi-truck'
+  }
+};
+// Alias legacy (por si algún otro módulo aún lo lee).
+window.WA_NUMBER = window.WA_NUMBERS.local.number;
+
+function fmtWaNumber(n) {
+  const s = String(n || '').replace(/\D+/g, '');
+  if (s.length < 9) return '+' + s;
+  const cc = s.slice(0, -9);
+  const a = s.slice(-9, -6), b = s.slice(-6, -3), c = s.slice(-3);
+  return `+${cc} ${a} ${b} ${c}`;
+}
+
+/* Abre el picker modal (o cae al número local si bootstrap no está listo). */
+window.openWhatsApp = function(message = '') {
+  const modal = document.getElementById('waPickerModal');
+  if (!modal || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+    const n = window.WA_NUMBERS.local.number;
+    window.open(`https://wa.me/${n}?text=${encodeURIComponent(message || '')}`, '_blank');
+    return;
+  }
+  // Pinta números en vivo + cablea los botones
+  modal.querySelectorAll('[data-wa-key]').forEach(btn => {
+    const key = btn.getAttribute('data-wa-key');
+    const n = window.WA_NUMBERS[key];
+    if (!n) return;
+    const nEl = btn.querySelector('.wa-picker-number');
+    if (nEl) nEl.textContent = fmtWaNumber(n.number);
+    btn.onclick = () => {
+      window.open(`https://wa.me/${n.number}?text=${encodeURIComponent(message || '')}`, '_blank');
+      const inst = bootstrap.Modal.getInstance(modal);
+      if (inst) inst.hide();
+    };
+  });
+  bootstrap.Modal.getOrCreateInstance(modal).show();
+};
+
+/* Intercepta clicks en cualquier CTA de WhatsApp (flotante verde en cada
+ * HTML, ícono del footer, o cualquier <a class="lu-wa-link">). Así no
+ * tenemos que editar los 15 HTMLs individuales. */
+document.addEventListener('click', (e) => {
+  const trigger = e.target.closest('.whatsapp-float, .lu-wa-link');
+  if (!trigger) return;
+  e.preventDefault();
+  window.openWhatsApp('');
+}, true);
 
 /* ================================================================ */
 /* VENTAS + BEST-SELLERS DINÁMICOS                                  */
@@ -327,7 +391,12 @@ window.openProductModal = function(id) {
   document.getElementById('modalQty').value = 1;
 
   const waMsg = `Hola! Me interesa el producto: ${p.nombre} - S/${p.precio.toFixed(2)}. ¿Tienen stock?`;
-  document.getElementById('modalWhatsapp').href = `https://wa.me/${window.WA_NUMBER}?text=${encodeURIComponent(waMsg)}`;
+  const modalWaBtn = document.getElementById('modalWhatsapp');
+  if (modalWaBtn) {
+    modalWaBtn.removeAttribute('href');
+    modalWaBtn.style.cursor = 'pointer';
+    modalWaBtn.onclick = (ev) => { ev.preventDefault(); window.openWhatsApp(waMsg); };
+  }
 
   const modalFav = document.getElementById('modalFav');
   if (modalFav) {
@@ -637,7 +706,9 @@ function renderProductoPage() {
   if (addBtn) addBtn.addEventListener('click', () => addToCart(p.id, qty));
   if (wspBtn) {
     const msg = `Hola! Me interesa el producto: ${p.nombre} - S/${p.precio.toFixed(2)}. ¿Tienen stock?`;
-    wspBtn.href = `https://wa.me/${window.WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+    wspBtn.removeAttribute('href');
+    wspBtn.style.cursor = 'pointer';
+    wspBtn.onclick = (ev) => { ev.preventDefault(); window.openWhatsApp(msg); };
   }
 
   const favBtn = document.getElementById('productoFav');
@@ -738,8 +809,8 @@ function initContactoForm() {
     const mensaje = form.querySelector('[name="mensaje"]').value.trim();
     if (!nombre || !email || !mensaje) return;
     const msg = `👋 *Mensaje desde Lünabi*\n\n*Nombre:* ${nombre}\n*Email:* ${email}\n\n${mensaje}`;
-    window.open(`https://wa.me/${window.WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-    showToast('Mensaje enviado vía WhatsApp', 'success');
+    window.openWhatsApp(msg);
+    showToast('Elige tu ubicación para enviar', 'info');
     form.reset();
   });
 }
@@ -758,8 +829,8 @@ function initReclamacionesForm() {
     };
     if (!data.nombre || !data.dni || !data.producto || !data.descripcion) return;
     const msg = `📋 *Libro de Reclamaciones — Lünabi*\n\n*Nombre:* ${data.nombre}\n*DNI:* ${data.dni}\n*Producto/Servicio:* ${data.producto}\n*Motivo:* ${data.motivo}\n\n*Descripción:*\n${data.descripcion}`;
-    window.open(`https://wa.me/${window.WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-    showToast('Reclamación enviada', 'success');
+    window.openWhatsApp(msg);
+    showToast('Elige tu ubicación para enviar', 'info');
     form.reset();
   });
 }
@@ -815,6 +886,9 @@ function initApp() {
       break;
     case 'admin':
       if (typeof initAdmin === 'function') initAdmin();
+      break;
+    case 'cuenta':
+      if (typeof initCuenta === 'function') initCuenta();
       break;
     default:
       // nosotros / faq / terminos: no extra JS needed

@@ -771,26 +771,37 @@
     if (!tbody) return;
 
     const adminProducts = load(STORE_PRODUCTS);
+    const baseMax = window.__baseProductMaxId || 0;
     const all = window.products || [];
     if (countEl) countEl.textContent = all.length;
 
     tbody.innerHTML = all.length ? all.map(p => {
       const b = (window.brands || []).find(br => br.slug === p.marca);
-      const isAdmin = adminProducts.some(ap => ap.id === p.id);
+      const inAdmin = adminProducts.some(ap => ap.id === p.id);
+      const isNew = p.id > baseMax;
+      const tag = inAdmin
+        ? (isNew
+            ? '<span class="admin-tag-custom">nuevo</span>'
+            : '<span class="admin-tag-custom admin-tag-edit">editado</span>')
+        : '';
       return `
         <tr>
           <td>#${p.id}</td>
-          <td>${p.nombre}${isAdmin ? ' <span class="admin-tag-custom">admin</span>' : ''}</td>
+          <td>${p.nombre}${tag}</td>
           <td>${b ? b.nombre : p.marca}</td>
           <td>${(window.SUBCAT_LABELS || {})[p.categoria] || p.categoria}</td>
           <td>S/ ${Number(p.precio).toFixed(2)}</td>
-          <td>${isAdmin
-            ? `<button class="admin-btn-icon" data-delete-product="${p.id}" aria-label="Eliminar"><i class="bi bi-trash3"></i></button>`
-            : '<span class="admin-hint">base</span>'}
+          <td class="admin-td-actions">
+            <button class="admin-btn-icon admin-btn-edit" data-edit-product="${p.id}" aria-label="Editar"><i class="bi bi-pencil-square"></i></button>
+            ${inAdmin
+              ? `<button class="admin-btn-icon" data-delete-product="${p.id}" aria-label="${isNew ? 'Eliminar' : 'Revertir a original'}"><i class="bi bi-${isNew ? 'trash3' : 'arrow-counterclockwise'}"></i></button>`
+              : ''}
           </td>
         </tr>`;
     }).join('') : '<tr><td colspan="6" class="admin-empty">Aún no hay productos.</td></tr>';
   }
+
+  let editingProductId = null;
 
   function initProductsForm() {
     const form = document.getElementById('productForm');
@@ -804,9 +815,6 @@
       updateSubcatOptions(e.target.value);
     });
 
-    // Slug 100% automático: se recalcula siempre a partir del nombre. El
-    // input es readonly (el usuario lo ve como preview) y en submit se
-    // garantiza unicidad contra el catálogo completo.
     const nombreInput = form.querySelector('[name="nombre"]');
     const slugInput = form.querySelector('[name="slug"]');
     nombreInput.addEventListener('input', () => {
@@ -816,11 +824,69 @@
     const images = initRepeater('imagesRepeater');
     images.reset(['']);
 
-    // Modo de uso y beneficios son textareas: una línea = un ítem.
     const splitLines = (txt) => (txt || '')
       .split(/\r?\n/)
       .map(s => s.trim())
       .filter(Boolean);
+
+    // Botones de acción: soportamos un modo "edición" que transforma el
+    // submit en update y muestra un botón cancelar.
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const resetBtn  = form.querySelector('button[type="reset"]');
+    let cancelEditBtn = form.querySelector('#cancelEditProduct');
+    if (!cancelEditBtn) {
+      cancelEditBtn = document.createElement('button');
+      cancelEditBtn.id = 'cancelEditProduct';
+      cancelEditBtn.type = 'button';
+      cancelEditBtn.className = 'admin-btn-ghost';
+      cancelEditBtn.innerHTML = '<i class="bi bi-x-lg"></i> Cancelar edición';
+      cancelEditBtn.style.display = 'none';
+      resetBtn.parentNode.insertBefore(cancelEditBtn, resetBtn);
+    }
+    const formTitle = form.querySelector('.admin-form-title');
+    const originalTitle  = formTitle ? formTitle.innerHTML : '';
+    const originalSubmit = submitBtn ? submitBtn.innerHTML : 'Guardar';
+
+    function enterEditMode(p) {
+      editingProductId = p.id;
+      form.querySelector('[name="nombre"]').value = p.nombre || '';
+      slugInput.value = p.slug || slugify(p.nombre || '');
+      form.querySelector('[name="marca"]').value = p.marca || '';
+      form.querySelector('[name="categoria"]').value = p.categoria || '';
+      updateSubcatOptions(p.categoria || '');
+      setTimeout(() => {
+        const sub = form.querySelector('[name="subcategoria"]');
+        if (sub) sub.value = p.subcategoria || '';
+      }, 0);
+      form.querySelector('[name="precio"]').value = p.precio || '';
+      form.querySelector('[name="precioAntes"]').value = p.precioAntes || '';
+      form.querySelectorAll('[name="tipoPiel"]').forEach(cb => {
+        cb.checked = Array.isArray(p.tipoPiel) && p.tipoPiel.includes(cb.value);
+      });
+      form.querySelector('[name="descripcion"]').value = p.descripcion || '';
+      form.querySelector('[name="modoDeUso"]').value  = Array.isArray(p.modoDeUso)  ? p.modoDeUso.join('\n')  : '';
+      form.querySelector('[name="beneficios"]').value = Array.isArray(p.beneficios) ? p.beneficios.join('\n') : '';
+      form.querySelector('[name="masVendido"]').checked = !!p.masVendido;
+      form.querySelector('[name="enOferta"]').checked   = !!p.enOferta;
+      images.reset(Array.isArray(p.imagenes) && p.imagenes.length ? p.imagenes.slice() : ['']);
+      if (formTitle) formTitle.innerHTML = `<i class="bi bi-pencil-square"></i> Editando producto <span class="admin-tag-custom">#${p.id}</span>`;
+      if (submitBtn) submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Actualizar producto';
+      cancelEditBtn.style.display = '';
+      form.classList.add('is-editing');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (window.showToast) window.showToast(`Editando "${p.nombre}"`, 'info');
+    }
+    function exitEditMode() {
+      editingProductId = null;
+      form.reset();
+      images.reset(['']);
+      updateSubcatOptions('');
+      if (formTitle) formTitle.innerHTML = originalTitle;
+      if (submitBtn) submitBtn.innerHTML = originalSubmit;
+      cancelEditBtn.style.display = 'none';
+      form.classList.remove('is-editing');
+    }
+    cancelEditBtn.addEventListener('click', exitEditMode);
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -846,17 +912,14 @@
         return;
       }
 
-      // Slug único derivado del nombre. Si ya existe otro producto con el
-      // mismo slug, append `-2`, `-3`, … hasta encontrar uno libre.
+      // Slug único: ignorar self cuando estamos editando.
       const all = window.products || [];
       const base = slugify(nombre) || `producto-${all.length + 1}`;
-      let slug = base;
-      let n = 2;
-      while (all.some(p => p.slug === slug)) { slug = `${base}-${n++}`; }
+      let slug = base, n = 2;
+      while (all.some(p => p.slug === slug && p.id !== editingProductId)) slug = `${base}-${n++}`;
       slugInput.value = slug;
-      const adminProducts = load(STORE_PRODUCTS);
-      const newProduct = {
-        id: all.reduce((m, p) => Math.max(m, p.id), 0) + 1,
+
+      const common = {
         slug,
         nombre,
         marca,
@@ -867,39 +930,77 @@
         precioAntes,
         imagenes: imgs,
         descripcion: (fd.get('descripcion') || '').trim(),
-        modoDeUso: splitLines(fd.get('modoDeUso')),
+        modoDeUso:  splitLines(fd.get('modoDeUso')),
         beneficios: splitLines(fd.get('beneficios')),
         masVendido: form.querySelector('[name="masVendido"]').checked,
         enOferta:   form.querySelector('[name="enOferta"]').checked
       };
-      adminProducts.push(newProduct);
-      save(STORE_PRODUCTS, adminProducts);
-      (window.products || []).push(newProduct);
 
-      form.reset();
-      images.reset(['']);
-      updateSubcatOptions('');
-      slugTouched = false;
+      const adminProducts = load(STORE_PRODUCTS);
 
-      renderProductsTable();
-      renderDashboard();
-      if (window.showToast) window.showToast('Producto agregado', 'success');
+      if (editingProductId != null) {
+        // UPDATE — upsert en storage + reemplazo in-memory
+        const product = { id: editingProductId, ...common };
+        const aidx = adminProducts.findIndex(ap => ap.id === editingProductId);
+        if (aidx > -1) adminProducts[aidx] = product;
+        else adminProducts.push(product);
+        save(STORE_PRODUCTS, adminProducts);
+        const pidx = (window.products || []).findIndex(p => p.id === editingProductId);
+        if (pidx > -1) window.products[pidx] = product;
+        exitEditMode();
+        renderProductsTable();
+        renderDashboard();
+        if (window.showToast) window.showToast('Producto actualizado', 'success');
+      } else {
+        // CREATE — id nuevo (> max existente)
+        const product = {
+          id: all.reduce((m, p) => Math.max(m, p.id), 0) + 1,
+          ...common
+        };
+        adminProducts.push(product);
+        save(STORE_PRODUCTS, adminProducts);
+        (window.products || []).push(product);
+        form.reset();
+        images.reset(['']);
+        updateSubcatOptions('');
+        renderProductsTable();
+        renderDashboard();
+        if (window.showToast) window.showToast('Producto agregado', 'success');
+      }
     });
 
-    // Delete delegation
+    // Delegación: edit + delete/revert sobre la tabla
     const table = document.getElementById('productsTable');
     if (table) table.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-delete-product]');
-      if (!btn) return;
-      const id = Number(btn.dataset.deleteProduct);
-      if (!confirm('¿Eliminar este producto?')) return;
+      const editBtn = e.target.closest('[data-edit-product]');
+      if (editBtn) {
+        const id = Number(editBtn.dataset.editProduct);
+        const p = (window.products || []).find(x => x.id === id);
+        if (p) enterEditMode(p);
+        return;
+      }
+      const delBtn = e.target.closest('[data-delete-product]');
+      if (!delBtn) return;
+      const id = Number(delBtn.dataset.deleteProduct);
+      const baseMax = window.__baseProductMaxId || 0;
+      const isBase = id <= baseMax;
+      const q = isBase
+        ? '¿Revertir los cambios y volver al producto original del catálogo?'
+        : '¿Eliminar este producto?';
+      if (!confirm(q)) return;
       const list = load(STORE_PRODUCTS).filter(p => p.id !== id);
       save(STORE_PRODUCTS, list);
-      const idx = window.products.findIndex(p => p.id === id);
-      if (idx > -1) window.products.splice(idx, 1);
-      renderProductsTable();
-      renderDashboard();
-      if (window.showToast) window.showToast('Producto eliminado', 'info');
+      if (isBase) {
+        if (window.showToast) window.showToast('Revirtiendo al original…', 'info');
+        setTimeout(() => window.location.reload(), 400);
+      } else {
+        const idx = window.products.findIndex(p => p.id === id);
+        if (idx > -1) window.products.splice(idx, 1);
+        if (editingProductId === id) exitEditMode();
+        renderProductsTable();
+        renderDashboard();
+        if (window.showToast) window.showToast('Producto eliminado', 'info');
+      }
     });
   }
 
@@ -920,15 +1021,72 @@
         </div>
         <div class="admin-slide-meta">
           <span class="admin-hint">→ ${s.botonLink || '#'}</span>
-          <button class="admin-btn-icon" data-delete-slide="${i}" aria-label="Eliminar"><i class="bi bi-trash3"></i></button>
+          <div class="admin-td-actions">
+            <button class="admin-btn-icon admin-btn-edit" data-edit-slide="${i}" aria-label="Editar"><i class="bi bi-pencil-square"></i></button>
+            <button class="admin-btn-icon" data-delete-slide="${i}" aria-label="Eliminar"><i class="bi bi-trash3"></i></button>
+          </div>
         </div>
       </div>`).join('') : '<p class="admin-empty">No hay diapositivas personalizadas. La home usará el carrusel por defecto.</p>';
   }
+
+  let editingSlideIdx = null;
 
   function initSlidesForm() {
     const form = document.getElementById('slideForm');
     if (!form) return;
     form.querySelectorAll('.admin-image-input').forEach(wireImageInput);
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const resetBtn  = form.querySelector('button[type="reset"]');
+    let cancelEditBtn = form.querySelector('#cancelEditSlide');
+    if (!cancelEditBtn) {
+      cancelEditBtn = document.createElement('button');
+      cancelEditBtn.id = 'cancelEditSlide';
+      cancelEditBtn.type = 'button';
+      cancelEditBtn.className = 'admin-btn-ghost';
+      cancelEditBtn.innerHTML = '<i class="bi bi-x-lg"></i> Cancelar edición';
+      cancelEditBtn.style.display = 'none';
+      resetBtn.parentNode.insertBefore(cancelEditBtn, resetBtn);
+    }
+    const formTitle = form.querySelector('.admin-form-title');
+    const originalTitle  = formTitle ? formTitle.innerHTML : '';
+    const originalSubmit = submitBtn ? submitBtn.innerHTML : 'Guardar';
+
+    function enterEditMode(i) {
+      const slides = load(STORE_SLIDES);
+      const s = slides[i];
+      if (!s) return;
+      editingSlideIdx = i;
+      form.querySelector('[name="imagen"]').value      = s.imagen || '';
+      form.querySelector('[name="titulo"]').value      = s.titulo || '';
+      form.querySelector('[name="descripcion"]').value = s.descripcion || '';
+      form.querySelector('[name="botonTexto"]').value  = s.botonTexto || '';
+      form.querySelector('[name="botonLink"]').value   = s.botonLink || '';
+      form.querySelector('[name="badge"]').value       = s.badge || '';
+      form.querySelectorAll('.admin-image-input').forEach(c => {
+        const u = c.querySelector('input[type="text"], input[type="url"]');
+        if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      if (formTitle) formTitle.innerHTML = `<i class="bi bi-pencil-square"></i> Editando diapositiva <span class="admin-tag-custom">#${i + 1}</span>`;
+      if (submitBtn) submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Actualizar diapositiva';
+      cancelEditBtn.style.display = '';
+      form.classList.add('is-editing');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function exitEditMode() {
+      editingSlideIdx = null;
+      form.reset();
+      form.querySelectorAll('.admin-image-input').forEach(c => {
+        const u = c.querySelector('input[type="text"], input[type="url"]');
+        if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      if (formTitle) formTitle.innerHTML = originalTitle;
+      if (submitBtn) submitBtn.innerHTML = originalSubmit;
+      cancelEditBtn.style.display = 'none';
+      form.classList.remove('is-editing');
+    }
+    cancelEditBtn.addEventListener('click', exitEditMode);
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const fd = new FormData(form);
@@ -945,29 +1103,49 @@
         return;
       }
       const slides = load(STORE_SLIDES);
-      slides.push(slide);
-      save(STORE_SLIDES, slides);
-      form.reset();
-      renderSlidesList();
-      renderDashboard();
-      if (window.showToast) window.showToast('Diapositiva añadida', 'success');
+      if (editingSlideIdx != null) {
+        slides[editingSlideIdx] = slide;
+        save(STORE_SLIDES, slides);
+        exitEditMode();
+        renderSlidesList();
+        renderDashboard();
+        if (window.showToast) window.showToast('Diapositiva actualizada', 'success');
+      } else {
+        slides.push(slide);
+        save(STORE_SLIDES, slides);
+        form.reset();
+        form.querySelectorAll('.admin-image-input').forEach(c => {
+          const u = c.querySelector('input[type="text"], input[type="url"]');
+          if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        renderSlidesList();
+        renderDashboard();
+        if (window.showToast) window.showToast('Diapositiva añadida', 'success');
+      }
     });
 
     const listEl = document.getElementById('slidesList');
     if (listEl) listEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-delete-slide]');
-      if (!btn) return;
-      const i = Number(btn.dataset.deleteSlide);
+      const editBtn = e.target.closest('[data-edit-slide]');
+      if (editBtn) {
+        const i = Number(editBtn.dataset.editSlide);
+        enterEditMode(i);
+        return;
+      }
+      const delBtn = e.target.closest('[data-delete-slide]');
+      if (!delBtn) return;
+      const i = Number(delBtn.dataset.deleteSlide);
       const slides = load(STORE_SLIDES);
       slides.splice(i, 1);
       save(STORE_SLIDES, slides);
+      if (editingSlideIdx === i) exitEditMode();
       renderSlidesList();
       renderDashboard();
       if (window.showToast) window.showToast('Diapositiva eliminada', 'info');
     });
 
-    const resetBtn = document.getElementById('resetSlidesBtn');
-    if (resetBtn) resetBtn.addEventListener('click', () => {
+    const resetSlidesBtn = document.getElementById('resetSlidesBtn');
+    if (resetSlidesBtn) resetSlidesBtn.addEventListener('click', () => {
       if (!confirm('Esto borra tus diapositivas personalizadas y vuelve al carrusel por defecto. ¿Continuar?')) return;
       localStorage.removeItem(STORE_SLIDES);
       renderSlidesList();
@@ -982,22 +1160,33 @@
     const countEl = document.getElementById('brandsCount');
     if (!tbody) return;
     const adminBrands = load(STORE_BRANDS);
+    const baseMax = window.__baseBrandMaxId || 0;
     const all = window.brands || [];
     if (countEl) countEl.textContent = all.length;
     tbody.innerHTML = all.length ? all.map(b => {
-      const isAdmin = adminBrands.some(ab => ab.id === b.id);
+      const inAdmin = adminBrands.some(ab => ab.id === b.id);
+      const isNew = b.id > baseMax;
+      const tag = inAdmin
+        ? (isNew
+            ? '<span class="admin-tag-custom">nuevo</span>'
+            : '<span class="admin-tag-custom admin-tag-edit">editado</span>')
+        : '';
       return `
         <tr>
           <td><img src="${b.logo || ''}" alt="" onerror="this.style.visibility='hidden'"></td>
-          <td>${b.nombre}${isAdmin ? ' <span class="admin-tag-custom">admin</span>' : ''}</td>
+          <td>${b.nombre}${tag}</td>
           <td><code>${b.slug}</code></td>
-          <td>${isAdmin
-            ? `<button class="admin-btn-icon" data-delete-brand="${b.id}" aria-label="Eliminar"><i class="bi bi-trash3"></i></button>`
-            : '<span class="admin-hint">base</span>'}
+          <td class="admin-td-actions">
+            <button class="admin-btn-icon admin-btn-edit" data-edit-brand="${b.id}" aria-label="Editar"><i class="bi bi-pencil-square"></i></button>
+            ${inAdmin
+              ? `<button class="admin-btn-icon" data-delete-brand="${b.id}" aria-label="${isNew ? 'Eliminar' : 'Revertir a original'}"><i class="bi bi-${isNew ? 'trash3' : 'arrow-counterclockwise'}"></i></button>`
+              : ''}
           </td>
         </tr>`;
     }).join('') : '<tr><td colspan="4" class="admin-empty">Sin marcas.</td></tr>';
   }
+
+  let editingBrandId = null;
 
   function initBrandsForm() {
     const form = document.getElementById('brandForm');
@@ -1011,56 +1200,371 @@
       if (!touched) slugInput.value = slugify(nombreInput.value);
     });
 
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const resetBtn  = form.querySelector('button[type="reset"]');
+    let cancelEditBtn = form.querySelector('#cancelEditBrand');
+    if (!cancelEditBtn) {
+      cancelEditBtn = document.createElement('button');
+      cancelEditBtn.id = 'cancelEditBrand';
+      cancelEditBtn.type = 'button';
+      cancelEditBtn.className = 'admin-btn-ghost';
+      cancelEditBtn.innerHTML = '<i class="bi bi-x-lg"></i> Cancelar edición';
+      cancelEditBtn.style.display = 'none';
+      resetBtn.parentNode.insertBefore(cancelEditBtn, resetBtn);
+    }
+    const formTitle = form.querySelector('.admin-form-title');
+    const originalTitle  = formTitle ? formTitle.innerHTML : '';
+    const originalSubmit = submitBtn ? submitBtn.innerHTML : 'Guardar';
+
+    function enterEditMode(b) {
+      editingBrandId = b.id;
+      form.querySelector('[name="nombre"]').value = b.nombre || '';
+      form.querySelector('[name="slug"]').value = b.slug || '';
+      form.querySelector('[name="logo"]').value = b.logo || '';
+      form.querySelector('[name="descripcion"]').value = b.descripcion || '';
+      // Re-sincroniza el preview del image-input
+      form.querySelectorAll('.admin-image-input').forEach(c => {
+        const u = c.querySelector('input[type="text"], input[type="url"]');
+        if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      touched = true;
+      if (formTitle) formTitle.innerHTML = `<i class="bi bi-pencil-square"></i> Editando marca <span class="admin-tag-custom">#${b.id}</span>`;
+      if (submitBtn) submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Actualizar marca';
+      cancelEditBtn.style.display = '';
+      form.classList.add('is-editing');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (window.showToast) window.showToast(`Editando "${b.nombre}"`, 'info');
+    }
+    function exitEditMode() {
+      editingBrandId = null;
+      form.reset();
+      form.querySelectorAll('.admin-image-input').forEach(c => {
+        const u = c.querySelector('input[type="text"], input[type="url"]');
+        if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      touched = false;
+      if (formTitle) formTitle.innerHTML = originalTitle;
+      if (submitBtn) submitBtn.innerHTML = originalSubmit;
+      cancelEditBtn.style.display = 'none';
+      form.classList.remove('is-editing');
+    }
+    cancelEditBtn.addEventListener('click', exitEditMode);
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const nombre = (fd.get('nombre') || '').trim();
       const slug = (fd.get('slug') || slugify(nombre)).trim();
       if (!nombre || !slug) return;
-      if ((window.brands || []).some(b => b.slug === slug)) {
+      // Validar slug único, ignorando self cuando editamos
+      if ((window.brands || []).some(b => b.slug === slug && b.id !== editingBrandId)) {
         if (window.showToast) window.showToast('Ya existe una marca con ese slug', 'info');
         return;
       }
-      const adminBrands = load(STORE_BRANDS);
-      const newBrand = {
-        id: (window.brands || []).reduce((m, b) => Math.max(m, b.id), 0) + 1,
+      const common = {
         nombre,
         slug,
         logo: (fd.get('logo') || '').trim(),
         descripcion: (fd.get('descripcion') || '').trim()
       };
-      adminBrands.push(newBrand);
-      save(STORE_BRANDS, adminBrands);
-      (window.brands || []).push(newBrand);
+      const adminBrands = load(STORE_BRANDS);
 
-      form.reset();
-      touched = false;
-      renderBrandsTable();
-      renderDashboard();
-
-      // Mantener el select de marcas del form de productos al día
-      const psel = document.querySelector('#productForm [name="marca"]');
-      if (psel) psel.innerHTML = buildBrandOptions();
-
-      if (window.showToast) window.showToast('Marca agregada', 'success');
+      if (editingBrandId != null) {
+        // UPDATE
+        const brand = { id: editingBrandId, ...common };
+        const aidx = adminBrands.findIndex(ab => ab.id === editingBrandId);
+        if (aidx > -1) adminBrands[aidx] = brand;
+        else adminBrands.push(brand);
+        save(STORE_BRANDS, adminBrands);
+        const bidx = (window.brands || []).findIndex(b => b.id === editingBrandId);
+        if (bidx > -1) window.brands[bidx] = brand;
+        exitEditMode();
+        renderBrandsTable();
+        renderDashboard();
+        const psel = document.querySelector('#productForm [name="marca"]');
+        if (psel) psel.innerHTML = buildBrandOptions();
+        if (window.showToast) window.showToast('Marca actualizada', 'success');
+      } else {
+        // CREATE
+        const brand = {
+          id: (window.brands || []).reduce((m, b) => Math.max(m, b.id), 0) + 1,
+          ...common
+        };
+        adminBrands.push(brand);
+        save(STORE_BRANDS, adminBrands);
+        (window.brands || []).push(brand);
+        form.reset();
+        touched = false;
+        renderBrandsTable();
+        renderDashboard();
+        const psel = document.querySelector('#productForm [name="marca"]');
+        if (psel) psel.innerHTML = buildBrandOptions();
+        if (window.showToast) window.showToast('Marca agregada', 'success');
+      }
     });
 
     const table = document.getElementById('brandsTable');
     if (table) table.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-delete-brand]');
-      if (!btn) return;
-      const id = Number(btn.dataset.deleteBrand);
-      if (!confirm('¿Eliminar esta marca? Los productos asociados no se eliminan automáticamente.')) return;
+      const editBtn = e.target.closest('[data-edit-brand]');
+      if (editBtn) {
+        const id = Number(editBtn.dataset.editBrand);
+        const b = (window.brands || []).find(x => x.id === id);
+        if (b) enterEditMode(b);
+        return;
+      }
+      const delBtn = e.target.closest('[data-delete-brand]');
+      if (!delBtn) return;
+      const id = Number(delBtn.dataset.deleteBrand);
+      const baseMax = window.__baseBrandMaxId || 0;
+      const isBase = id <= baseMax;
+      const q = isBase
+        ? '¿Revertir los cambios y volver a la marca original?'
+        : '¿Eliminar esta marca? Los productos asociados no se eliminan automáticamente.';
+      if (!confirm(q)) return;
       const list = load(STORE_BRANDS).filter(b => b.id !== id);
       save(STORE_BRANDS, list);
-      const idx = window.brands.findIndex(b => b.id === id);
-      if (idx > -1) window.brands.splice(idx, 1);
-      renderBrandsTable();
-      renderDashboard();
-      const psel = document.querySelector('#productForm [name="marca"]');
-      if (psel) psel.innerHTML = buildBrandOptions();
-      if (window.showToast) window.showToast('Marca eliminada', 'info');
+      if (isBase) {
+        if (window.showToast) window.showToast('Revirtiendo al original…', 'info');
+        setTimeout(() => window.location.reload(), 400);
+      } else {
+        const idx = window.brands.findIndex(b => b.id === id);
+        if (idx > -1) window.brands.splice(idx, 1);
+        if (editingBrandId === id) exitEditMode();
+        renderBrandsTable();
+        renderDashboard();
+        const psel = document.querySelector('#productForm [name="marca"]');
+        if (psel) psel.innerHTML = buildBrandOptions();
+        if (window.showToast) window.showToast('Marca eliminada', 'info');
+      }
     });
+  }
+
+  /* ================================================================
+   * PEDIDOS — seguimiento manual de envíos
+   * ================================================================ */
+  const ADMIN_STAGES = [
+    { key: 'confirmado',    title: 'Confirmado',    short: 'Conf.',      icon: 'bi-check-circle-fill', leg: 'int' },
+    { key: 'preparacion',   title: 'En preparación',short: 'Prep.',      icon: 'bi-box-seam',          leg: 'int' },
+    { key: 'internacional', title: 'Internacional', short: 'Intern.',    icon: 'bi-airplane-engines',  leg: 'int' },
+    { key: 'aduana',        title: 'En aduana',     short: 'Aduana',     icon: 'bi-building-check',    leg: 'int' },
+    { key: 'nacional',      title: 'Envío nacional',short: 'Nacional',   icon: 'bi-truck',             leg: 'nac' },
+    { key: 'entregado',     title: 'Entregado',     short: 'Entregado',  icon: 'bi-bag-check-fill',    leg: 'nac' }
+  ];
+
+  function loadOrdersMap() {
+    try { return JSON.parse(localStorage.getItem('lunabi_orders') || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+  function saveOrdersMap(map) {
+    try { localStorage.setItem('lunabi_orders', JSON.stringify(map)); } catch (e) { /* cuota */ }
+  }
+  function flattenOrders() {
+    const map = loadOrdersMap();
+    const out = [];
+    Object.entries(map).forEach(([email, list]) => {
+      if (!Array.isArray(list)) return;
+      list.forEach(o => out.push({ ...o, _email: email }));
+    });
+    return out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+
+  /* Deriva la etapa actual si el admin no la marcó a mano — usa el mismo
+   * cálculo por tiempo que cuenta.js para mantener consistencia. */
+  function computeAutoStageKey(order) {
+    if (order.status === 'entregado') return 'entregado';
+    const h = (Date.now() - (order.createdAt || 0)) / 3600000;
+    if (h >= 432) return 'entregado';
+    if (h >= 360) return 'nacional';
+    if (h >= 264) return 'aduana';
+    if (h >= 72)  return 'internacional';
+    if (h >= 24)  return 'preparacion';
+    return 'confirmado';
+  }
+  function currentStageKey(order) {
+    return order.stageKey || computeAutoStageKey(order);
+  }
+
+  function updateOrderStage(email, orderId, stageKey) {
+    const map = loadOrdersMap();
+    if (!Array.isArray(map[email])) return;
+    const idx = map[email].findIndex(o => o.id === orderId);
+    if (idx === -1) return;
+    map[email][idx].stageKey = stageKey;
+    // Sincronizamos el status amigable
+    if (stageKey === 'entregado') map[email][idx].status = 'entregado';
+    else if (map[email][idx].status === 'entregado') map[email][idx].status = 'pendiente';
+    saveOrdersMap(map);
+  }
+
+  function deleteOrder(email, orderId) {
+    const map = loadOrdersMap();
+    if (!Array.isArray(map[email])) return;
+    map[email] = map[email].filter(o => o.id !== orderId);
+    if (!map[email].length) delete map[email];
+    saveOrdersMap(map);
+  }
+
+  let adminOrdersFilter = 'todos';
+
+  function renderAdminOrders() {
+    const listEl = document.getElementById('adminOrdersList');
+    const filtersEl = document.getElementById('adminOrdersFilters');
+    const statsEl = document.getElementById('adminOrdersStats');
+    if (!listEl) return;
+
+    const orders = flattenOrders();
+
+    // Stats rápidos
+    const counts = { todos: orders.length };
+    ADMIN_STAGES.forEach(s => { counts[s.key] = 0; });
+    orders.forEach(o => { counts[currentStageKey(o)] = (counts[currentStageKey(o)] || 0) + 1; });
+
+    // Filtros (chips)
+    const filters = [
+      { key: 'todos',         label: 'Todos',          icon: 'bi-layers' },
+      { key: 'confirmado',    label: 'Confirmados',    icon: 'bi-check-circle' },
+      { key: 'preparacion',   label: 'En preparación', icon: 'bi-box-seam' },
+      { key: 'internacional', label: 'Internacional',  icon: 'bi-airplane-engines' },
+      { key: 'aduana',        label: 'Aduana',         icon: 'bi-building-check' },
+      { key: 'nacional',      label: 'Nacional',       icon: 'bi-truck' },
+      { key: 'entregado',     label: 'Entregados',     icon: 'bi-bag-check-fill' }
+    ];
+    if (filtersEl) {
+      filtersEl.innerHTML = filters.map(f => {
+        const n = f.key === 'todos' ? counts.todos : (counts[f.key] || 0);
+        return `
+          <button class="admin-order-filter${adminOrdersFilter === f.key ? ' is-active' : ''}"
+                  data-filter="${f.key}" type="button">
+            <i class="bi ${f.icon}"></i> ${f.label}
+            <span class="admin-order-filter-count">${n}</span>
+          </button>`;
+      }).join('');
+      filtersEl.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          adminOrdersFilter = btn.getAttribute('data-filter');
+          renderAdminOrders();
+        });
+      });
+    }
+
+    if (statsEl) {
+      const totalSpent = orders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+      statsEl.innerHTML = `<i class="bi bi-cash-coin"></i> S/ ${totalSpent.toFixed(2)} en <strong>${orders.length}</strong> pedidos`;
+    }
+
+    // Lista filtrada
+    const visible = (adminOrdersFilter === 'todos')
+      ? orders
+      : orders.filter(o => currentStageKey(o) === adminOrdersFilter);
+
+    if (!visible.length) {
+      listEl.innerHTML = `
+        <div class="admin-empty">
+          <i class="bi bi-bag"></i>
+          <p>${orders.length === 0 ? 'Aún no hay pedidos registrados.' : 'Ningún pedido coincide con el filtro activo.'}</p>
+        </div>`;
+      return;
+    }
+
+    listEl.innerHTML = visible.map(renderAdminOrder).join('');
+
+    // Cablear click en pills de etapa + botones
+    listEl.querySelectorAll('[data-stage]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const { stage, email, orderId } = btn.dataset;
+        updateOrderStage(email, orderId, stage);
+        renderAdminOrders();
+        if (window.showToast) window.showToast(`Pedido movido a: ${stage}`, 'success');
+      });
+    });
+    listEl.querySelectorAll('[data-admin-order-reset]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const { email, orderId } = btn.dataset;
+        const map = loadOrdersMap();
+        if (!Array.isArray(map[email])) return;
+        const idx = map[email].findIndex(o => o.id === orderId);
+        if (idx === -1) return;
+        delete map[email][idx].stageKey;
+        if (map[email][idx].status === 'entregado') map[email][idx].status = 'pendiente';
+        saveOrdersMap(map);
+        renderAdminOrders();
+        if (window.showToast) window.showToast('Etapa restaurada al cálculo automático', 'info');
+      });
+    });
+    listEl.querySelectorAll('[data-admin-order-delete]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const { email, orderId } = btn.dataset;
+        if (!confirm('¿Eliminar este pedido? Esta acción no se puede deshacer.')) return;
+        deleteOrder(email, orderId);
+        renderAdminOrders();
+        if (window.showToast) window.showToast('Pedido eliminado', 'info');
+      });
+    });
+  }
+
+  function renderAdminOrder(o) {
+    const d = new Date(o.createdAt || Date.now());
+    const date = d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+    const time = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const activeKey = currentStageKey(o);
+    const activeIdx = ADMIN_STAGES.findIndex(s => s.key === activeKey);
+    const manual = !!o.stageKey;
+    const itemsPreview = (o.items || []).slice(0, 3).map(it =>
+      `<img src="${escapeHtml(it.imagen || '')}" alt="" title="${escapeHtml(it.nombre)}" onerror="this.style.visibility='hidden'">`
+    ).join('');
+    const moreItems = (o.items || []).length > 3 ? `<span class="admin-order-more">+${o.items.length - 3}</span>` : '';
+
+    const stepsHtml = ADMIN_STAGES.map((s, i) => {
+      let state = 'pending';
+      if (i < activeIdx) state = 'done';
+      else if (i === activeIdx) state = 'current';
+      return `
+        <button class="admin-stage-pill is-${state}"
+                data-stage="${s.key}" data-email="${escapeHtml(o._email)}" data-order-id="${escapeHtml(o.id)}"
+                type="button" title="${s.title}">
+          <i class="bi ${s.icon}"></i>
+          <span>${s.short}</span>
+        </button>`;
+    }).join('');
+
+    return `
+      <article class="admin-order-card">
+        <header class="admin-order-card-head">
+          <div>
+            <div class="admin-order-card-id">${escapeHtml(o.id)}</div>
+            <div class="admin-order-card-meta">
+              <i class="bi bi-person-circle"></i> ${escapeHtml(o._email)}
+              <span class="admin-order-card-sep">·</span>
+              ${date} ${time}
+            </div>
+          </div>
+          <div class="admin-order-card-total">
+            <span class="admin-order-card-preview">${itemsPreview}${moreItems}</span>
+            <strong>S/ ${Number(o.total || 0).toFixed(2)}</strong>
+          </div>
+        </header>
+
+        <div class="admin-order-stages-wrap">
+          <div class="admin-order-stages-label">
+            Avance del envío
+            ${manual
+              ? '<span class="admin-tag-custom admin-tag-edit">Manual</span>'
+              : '<span class="admin-tag-custom">Auto por fecha</span>'}
+          </div>
+          <div class="admin-order-stages">${stepsHtml}</div>
+        </div>
+
+        <footer class="admin-order-card-foot">
+          ${manual
+            ? `<button class="admin-btn-ghost" type="button" data-admin-order-reset data-email="${escapeHtml(o._email)}" data-order-id="${escapeHtml(o.id)}"><i class="bi bi-arrow-counterclockwise"></i> Volver a automático</button>`
+            : ''}
+          <button class="admin-btn-icon" type="button" data-admin-order-delete data-email="${escapeHtml(o._email)}" data-order-id="${escapeHtml(o.id)}" aria-label="Eliminar pedido"><i class="bi bi-trash3"></i></button>
+        </footer>
+      </article>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   /* ---------- INIT ---------- */
@@ -1074,6 +1578,7 @@
     renderSlidesList();
     initBrandsForm();
     renderBrandsTable();
+    renderAdminOrders();
   }
 
   window.initAdmin = initAdmin;

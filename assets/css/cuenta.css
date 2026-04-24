@@ -1,0 +1,975 @@
+/* ===== LÜNABI — Mi Cuenta =====
+ * Hero + stats + tabs + paneles (pedidos, favoritos, rutina, perfil).
+ * Usa los tokens globales para respetar día/noche automáticamente. */
+
+.cuenta-page {
+  padding: calc(var(--nav-h-top) + var(--nav-h-bot) + 1.4rem) 0 3rem;
+  min-height: 100vh;
+  position: relative;
+}
+.cuenta-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 80% at 0% 0%, rgba(104,42,191,0.22), transparent 55%),
+    radial-gradient(60% 80% at 100% 0%, rgba(247,198,249,0.30), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+body.dark .cuenta-page::before {
+  background:
+    radial-gradient(60% 80% at 0% 0%, rgba(119,50,217,0.38), transparent 55%),
+    radial-gradient(60% 80% at 100% 0%, rgba(247,198,249,0.18), transparent 55%);
+}
+.cuenta-page > .container { position: relative; z-index: 1; }
+
+/* ---------- GATE (no-login) ---------- */
+.cuenta-gate {
+  text-align: center;
+  padding: 4rem 1.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 22px;
+  max-width: 520px;
+  margin: 3rem auto;
+  box-shadow: 0 10px 40px rgba(104,42,191,0.15);
+}
+.cuenta-gate > i {
+  font-size: 2.6rem;
+  color: var(--p-purple-deep);
+  background: linear-gradient(135deg, var(--p-lavender-light), var(--p-pink-soft));
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.8rem;
+}
+.cuenta-gate h2 {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  color: var(--text-heading);
+  margin-bottom: 0.3rem;
+}
+.cuenta-gate p { color: var(--text-muted); }
+.cuenta-gate-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-top: 1.2rem;
+  flex-wrap: wrap;
+}
+.cuenta-btn-primary, .cuenta-btn-ghost {
+  padding: 0.7rem 1.4rem;
+  border-radius: 14px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: transform 0.22s, box-shadow 0.22s, background 0.22s, color 0.22s;
+  border: none;
+  cursor: pointer;
+}
+.cuenta-btn-primary {
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-purple-vibrant));
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(104,42,191,0.35);
+}
+.cuenta-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(119,50,217,0.48); }
+.cuenta-btn-ghost {
+  background: transparent;
+  color: var(--p-purple-deep);
+  border: 1px solid var(--p-lavender-light);
+}
+.cuenta-btn-ghost:hover { background: rgba(217,183,255,0.25); }
+body.dark .cuenta-btn-ghost { color: var(--p-lavender-light); border-color: rgba(217,183,255,0.4); }
+
+/* ---------- HERO ---------- */
+.cuenta-hero {
+  position: relative;
+  border-radius: 24px;
+  padding: 1.8rem;
+  overflow: hidden;
+  color: #fff;
+  margin-bottom: 1.6rem;
+  box-shadow: 0 20px 44px rgba(104,42,191,0.28);
+}
+.cuenta-hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, #682ABF 0%, #7732D9 45%, #9F84E6 75%, #F6C6F9 100%),
+    radial-gradient(circle at 100% 0%, rgba(247,198,249,0.4), transparent 55%);
+  z-index: 0;
+}
+.cuenta-hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 100% at 100% 100%, rgba(247,198,249,0.3), transparent 55%);
+}
+body.dark .cuenta-hero-bg {
+  background: linear-gradient(135deg, #2a1050 0%, #3a1a6d 50%, #4d2385 100%);
+}
+
+.cuenta-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.4rem;
+  align-items: center;
+}
+@media (max-width: 820px) {
+  .cuenta-hero-inner { grid-template-columns: auto 1fr; gap: 1rem; }
+  .cuenta-level { grid-column: 1 / -1; }
+}
+
+.cuenta-avatar {
+  width: 92px; height: 92px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F6C6F9, #D9B7FF);
+  color: var(--p-purple-deep);
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 0 0 3px rgba(255,255,255,0.4);
+  letter-spacing: -0.02em;
+}
+
+.cuenta-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.18);
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 0.6rem;
+}
+.cuenta-name {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 2rem;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.cuenta-email { margin: 2px 0 0.7rem; color: rgba(255,255,255,0.85); font-size: 0.9rem; }
+.cuenta-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.cuenta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.16);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  backdrop-filter: blur(6px);
+}
+.cuenta-chip strong { font-weight: 800; }
+.cuenta-chip-accent { background: rgba(247,198,249,0.3); }
+
+/* Level badge */
+.cuenta-level {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 180px;
+}
+.cuenta-level-badge {
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.35);
+  padding: 8px 16px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  backdrop-filter: blur(10px);
+}
+.cuenta-level-badge i { font-size: 1rem; }
+.cuenta-level-badge.lv-bronce   { background: linear-gradient(135deg, #cd7f32, #a66626); border-color: rgba(255,255,255,0.5); }
+.cuenta-level-badge.lv-plata    { background: linear-gradient(135deg, #e0e0e0, #a8a8a8); color: #2a1050; border-color: rgba(255,255,255,0.7); }
+.cuenta-level-badge.lv-oro      { background: linear-gradient(135deg, #ffd54f, #d4af37); color: #5a3500; border-color: rgba(255,255,255,0.6); }
+.cuenta-level-badge.lv-platino  { background: linear-gradient(135deg, #f6c6f9, #d9b7ff); color: #682ABF; border-color: rgba(255,255,255,0.7); }
+
+.cuenta-level-track {
+  width: 180px;
+  height: 6px;
+  background: rgba(255,255,255,0.22);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cuenta-level-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #F6C6F9, #fff);
+  border-radius: 4px;
+  transition: width 1s cubic-bezier(0.23,1,0.32,1);
+}
+.cuenta-level-hint {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.85);
+  text-align: right;
+}
+@media (max-width: 820px) {
+  .cuenta-level { align-items: flex-start; }
+  .cuenta-level-hint { text-align: left; }
+  .cuenta-level-track { width: 100%; }
+}
+
+/* ---------- STATS ---------- */
+.cuenta-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.6rem;
+}
+.cuenta-stat {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.22s, box-shadow 0.22s;
+  position: relative;
+  overflow: hidden;
+}
+.cuenta-stat:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+}
+.cuenta-stat::after {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.08;
+  pointer-events: none;
+  transition: transform 0.4s ease;
+}
+.cuenta-stat:hover::after { transform: scale(1.2); }
+.cuenta-stat-icon {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+.cuenta-stat-body { position: relative; z-index: 1; min-width: 0; }
+.cuenta-stat-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.cuenta-stat-value {
+  display: block;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--text-heading);
+  line-height: 1.1;
+}
+.cuenta-stat.c1 { color: #682ABF; }
+.cuenta-stat.c1 .cuenta-stat-icon { background: linear-gradient(135deg, #682ABF, #7732D9); }
+.cuenta-stat.c2 { color: #2fae8e; }
+.cuenta-stat.c2 .cuenta-stat-icon { background: linear-gradient(135deg, #5ed8b8, #2fae8e); }
+.cuenta-stat.c3 { color: #E53E6B; }
+.cuenta-stat.c3 .cuenta-stat-icon { background: linear-gradient(135deg, #F6C6F9, #E53E6B); }
+.cuenta-stat.c4 { color: #7732D9; }
+.cuenta-stat.c4 .cuenta-stat-icon { background: linear-gradient(135deg, #9F84E6, #7732D9); }
+body.dark .cuenta-stat::after { opacity: 0.18; }
+
+/* ---------- TABS (segmented pill) ---------- */
+.cuenta-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 1.3rem;
+  box-shadow: var(--card-shadow);
+}
+.cuenta-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+.cuenta-tab i { font-size: 0.95rem; }
+.cuenta-tab:hover {
+  color: var(--p-purple-deep);
+  background: rgba(159,132,230,0.12);
+}
+.cuenta-tab.active {
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-purple-vibrant));
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(104,42,191,0.32);
+}
+.cuenta-tab.active i { transform: scale(1.15); }
+body.dark .cuenta-tab.active {
+  background: linear-gradient(135deg, var(--p-purple-vibrant), var(--p-pink-soft));
+  color: var(--p-purple-deep);
+}
+
+/* ---------- PANELS ---------- */
+.cuenta-panel { display: none; animation: cuenta-fade 0.3s ease; }
+.cuenta-panel.active { display: block; }
+@keyframes cuenta-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cuenta-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: 16px;
+}
+.cuenta-empty i {
+  font-size: 3rem;
+  color: var(--p-lila-mid);
+  margin-bottom: 0.8rem;
+}
+.cuenta-empty h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0.3rem 0;
+}
+.cuenta-empty p { color: var(--text-muted); margin: 0 0 1rem; }
+
+/* ---------- ORDERS ---------- */
+.cuenta-order {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 0.9rem;
+  transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
+}
+.cuenta-order:hover {
+  transform: translateX(3px);
+  border-color: var(--p-lila-mid);
+  box-shadow: 0 8px 24px rgba(104,42,191,0.15);
+}
+.cuenta-order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+}
+.cuenta-order-id {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-weight: 700;
+  color: var(--p-purple-deep);
+  font-size: 0.82rem;
+}
+body.dark .cuenta-order-id { color: var(--p-pink-soft); }
+.cuenta-order-date {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.cuenta-order-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px;
+  border-radius: 18px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+.cuenta-order-status.pendiente  { background: rgba(245,192,110,0.22); color: #b37f20; }
+.cuenta-order-status.confirmado { background: rgba(159,132,230,0.22); color: var(--p-purple-deep); }
+.cuenta-order-status.enviado    { background: rgba(47,174,142,0.22); color: #1a7859; }
+.cuenta-order-status.entregado  { background: rgba(37,211,102,0.22); color: #17703a; }
+body.dark .cuenta-order-status.pendiente  { color: #F5C06E; }
+body.dark .cuenta-order-status.confirmado { color: var(--p-lavender-light); }
+body.dark .cuenta-order-status.enviado    { color: #5ed8b8; }
+body.dark .cuenta-order-status.entregado  { color: #4bd981; }
+
+.cuenta-order-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+.cuenta-order-item {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+.cuenta-order-item:hover { background: rgba(159,132,230,0.1); }
+.cuenta-order-item img {
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--p-beige-soft);
+}
+.cuenta-order-item-name {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+  display: block;
+}
+.cuenta-order-item-name:hover { color: var(--p-purple-deep); }
+.cuenta-order-item-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cuenta-order-item-qty {
+  font-size: 0.82rem;
+  color: var(--text-main);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cuenta-order-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--card-border);
+  flex-wrap: wrap;
+}
+.cuenta-order-total {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--p-purple-deep);
+}
+body.dark .cuenta-order-total { color: var(--p-pink-soft); }
+.cuenta-order-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.cuenta-order-btn {
+  background: transparent;
+  border: 1px solid var(--p-lavender-light);
+  color: var(--p-purple-deep);
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.22s;
+  text-decoration: none;
+}
+.cuenta-order-btn:hover {
+  background: var(--p-purple-deep);
+  color: #fff;
+  border-color: var(--p-purple-deep);
+  transform: translateY(-1px);
+}
+body.dark .cuenta-order-btn {
+  color: var(--p-lavender-light);
+  border-color: rgba(217,183,255,0.45);
+}
+body.dark .cuenta-order-btn:hover {
+  background: var(--p-pink-soft);
+  color: var(--p-purple-deep);
+  border-color: var(--p-pink-soft);
+}
+
+/* ---------- FAVORITOS grid ---------- */
+.cuenta-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.cuenta-panel-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--text-heading);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cuenta-panel-title i {
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-purple-vibrant));
+  color: #fff;
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+body.dark .cuenta-panel-title i {
+  background: linear-gradient(135deg, var(--p-pink-soft), var(--p-lila-mid));
+  color: var(--p-purple-deep);
+}
+
+/* ---------- RUTINA ---------- */
+.cuenta-rutina-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 1.4rem 1.5rem;
+  box-shadow: var(--card-shadow);
+}
+.cuenta-rutina-tags {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+.cuenta-rutina-tag {
+  background: rgba(217,183,255,0.28);
+  color: var(--p-purple-deep);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 11px;
+  border-radius: 18px;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+body.dark .cuenta-rutina-tag {
+  background: rgba(247,198,249,0.18);
+  color: var(--p-pink-soft);
+}
+.cuenta-rutina-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 0.9rem;
+}
+.cuenta-rutina-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.cuenta-rutina-step {
+  display: grid;
+  grid-template-columns: 36px 60px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  transition: border-color 0.22s, transform 0.22s;
+}
+.cuenta-rutina-step:hover {
+  border-color: var(--p-lila-mid);
+  transform: translateX(3px);
+}
+.cuenta-rutina-step-n {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #682ABF, #7732D9);
+  color: #fff;
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cuenta-rutina-step-img {
+  width: 60px; height: 60px;
+  border-radius: 10px;
+  background: var(--p-beige-soft) center/contain no-repeat;
+}
+body.dark .cuenta-rutina-step-img { background-color: rgba(255,255,255,0.06); }
+.cuenta-rutina-step-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.92rem;
+  text-decoration: none;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cuenta-rutina-step-name:hover { color: var(--p-purple-deep); }
+.cuenta-rutina-step-tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--p-lila-mid);
+  font-weight: 600;
+}
+.cuenta-rutina-step-price {
+  font-weight: 700;
+  color: var(--p-purple-deep);
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+body.dark .cuenta-rutina-step-price { color: var(--p-pink-soft); }
+
+.cuenta-rutina-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+@media (max-width: 540px) {
+  .cuenta-rutina-step { grid-template-columns: 32px 50px 1fr; }
+  .cuenta-rutina-step-price { grid-column: 2 / 4; text-align: left; }
+}
+
+/* ---------- PERFIL ---------- */
+.cuenta-profile-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--card-shadow);
+}
+.cuenta-profile-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--card-border);
+  gap: 0.5rem;
+}
+.cuenta-profile-row:last-child { border-bottom: none; }
+.cuenta-profile-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.cuenta-profile-value {
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.cuenta-profile-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+.cuenta-danger-btn {
+  background: transparent;
+  border: 1px solid rgba(229,62,107,0.4);
+  color: #e53e6b;
+  padding: 0.6rem 1.1rem;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.22s;
+}
+.cuenta-danger-btn:hover {
+  background: #e53e6b;
+  color: #fff;
+  border-color: #e53e6b;
+}
+
+/* ============================================================
+ * SEGUIMIENTO DE ENVÍO — timeline con 2 tramos (int + nac)
+ * ============================================================ */
+.cuenta-tracking {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--card-border);
+}
+.cuenta-tracking[open] .cuenta-tracking-summary::after {
+  transform: rotate(180deg);
+}
+.cuenta-tracking-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  padding: 0.4rem 0;
+  user-select: none;
+}
+.cuenta-tracking-summary::-webkit-details-marker { display: none; }
+.cuenta-tracking-summary::after {
+  content: '\F282'; /* bi-chevron-down */
+  font-family: 'bootstrap-icons';
+  color: var(--p-lila-mid);
+  transition: transform 0.22s ease;
+  font-size: 0.9rem;
+}
+.cuenta-tracking-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-heading);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cuenta-tracking-title i {
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-purple-vibrant));
+  color: #fff;
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+}
+body.dark .cuenta-tracking-title i {
+  background: linear-gradient(135deg, var(--p-pink-soft), var(--p-lila-mid));
+  color: var(--p-purple-deep);
+}
+.cuenta-tracking-pct {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1rem;
+  color: var(--p-purple-deep);
+  background: rgba(217,183,255,0.22);
+  padding: 3px 12px;
+  border-radius: 16px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+body.dark .cuenta-tracking-pct {
+  color: var(--p-pink-soft);
+  background: rgba(247,198,249,0.16);
+}
+
+.cuenta-tracking-progress {
+  height: 7px;
+  background: rgba(159,132,230,0.16);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.3rem 0 1rem;
+  position: relative;
+}
+body.dark .cuenta-tracking-progress { background: rgba(247,198,249,0.14); }
+.cuenta-tracking-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--p-purple-deep), var(--p-purple-vibrant), var(--p-pink-soft));
+  border-radius: 4px;
+  transition: width 0.9s cubic-bezier(0.23,1,0.32,1);
+  position: relative;
+}
+.cuenta-tracking-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transform: translateX(-100%);
+  animation: cuenta-shimmer 2s ease-in-out infinite;
+}
+@keyframes cuenta-shimmer {
+  to { transform: translateX(100%); }
+}
+
+.cuenta-tracking-legs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+.cuenta-tracking-arrow {
+  text-align: center;
+  color: var(--p-lila-mid);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.cuenta-tracking-leg {
+  background: rgba(159,132,230,0.06);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 0.75rem 0.95rem;
+  position: relative;
+  overflow: hidden;
+}
+body.dark .cuenta-tracking-leg {
+  background: rgba(247,198,249,0.05);
+}
+.cuenta-tracking-leg::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--p-purple-deep), var(--p-purple-vibrant));
+}
+.cuenta-tracking-leg.leg-nac::before {
+  background: linear-gradient(180deg, var(--p-pink-soft), var(--p-lila-mid));
+}
+.cuenta-tracking-leg-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--p-purple-deep);
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+body.dark .cuenta-tracking-leg-title { color: var(--p-pink-soft); }
+.cuenta-tracking-leg-sub {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.cuenta-tracking-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  position: relative;
+  padding-left: 5px;
+}
+.cuenta-tracking-steps::before {
+  content: '';
+  position: absolute;
+  top: 14px; bottom: 14px;
+  left: 17px;
+  width: 2px;
+  background: rgba(159,132,230,0.28);
+}
+body.dark .cuenta-tracking-steps::before { background: rgba(247,198,249,0.2); }
+
+.cuenta-tracking-step {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  position: relative;
+}
+.cuenta-tracking-dot {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 2px solid var(--p-lila-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: var(--p-lila-mid);
+  position: relative;
+  z-index: 1;
+  transition: all 0.22s ease;
+}
+.cuenta-tracking-step.is-done .cuenta-tracking-dot {
+  background: var(--p-purple-deep);
+  border-color: var(--p-purple-deep);
+  color: #fff;
+}
+.cuenta-tracking-step.is-current .cuenta-tracking-dot {
+  background: linear-gradient(135deg, #F6C6F9, #682ABF);
+  border-color: #682ABF;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(247,198,249,0.35);
+  animation: cuenta-tracking-pulse 1.8s ease-in-out infinite;
+}
+@keyframes cuenta-tracking-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(247,198,249,0.45); }
+  50%      { box-shadow: 0 0 0 8px rgba(247,198,249,0.08); }
+}
+.cuenta-tracking-step.is-pending .cuenta-tracking-dot {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.cuenta-tracking-step-body { min-width: 0; }
+.cuenta-tracking-step-title {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+.cuenta-tracking-step-hint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+  margin-top: 1px;
+}
+.cuenta-tracking-step-date {
+  font-size: 0.72rem;
+  color: var(--p-lila-mid);
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+  letter-spacing: 0.2px;
+}
+.cuenta-tracking-step.is-done .cuenta-tracking-step-date {
+  color: var(--p-purple-deep);
+}
+.cuenta-tracking-step.is-current .cuenta-tracking-step-date {
+  color: #E53E6B;
+  font-weight: 700;
+}
+body.dark .cuenta-tracking-step.is-done .cuenta-tracking-step-date { color: var(--p-pink-soft); }
+.cuenta-tracking-step.is-pending .cuenta-tracking-step-body { opacity: 0.7; }
+
+@media (max-width: 560px) {
+  .cuenta-tracking-step { grid-template-columns: 26px 1fr; }
+  .cuenta-tracking-step-date {
+    grid-column: 2;
+    text-align: left;
+    margin-top: 2px;
+  }
+}

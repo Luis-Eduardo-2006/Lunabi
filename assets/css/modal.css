@@ -108,33 +108,136 @@ body.dark .modal-price { color: var(--p-pink-soft); }
   margin: 1rem 0;
 }
 
-/* Tabs */
+/* ---------- Tabs estilo pill (modal + producto.html) ----------
+ * Contenedor sin border-bottom de Bootstrap, fondo lavanda translúcido
+ * que encuadra los tabs como un segmented control. Cada tab lleva su
+ * propio icono y el estado activo tiene gradient acorde a su panel.
+ */
+.lu-tabs.nav-tabs,
 .modal-product .nav-tabs {
-  border-bottom: 1px solid var(--card-border);
+  border-bottom: none;
   gap: 4px;
+  padding: 5px;
+  background: linear-gradient(135deg, rgba(159,132,230,0.12), rgba(247,198,249,0.10));
+  border: 1px solid rgba(159,132,230,0.22);
+  border-radius: 16px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  box-shadow: inset 0 1px 2px rgba(104,42,191,0.06);
 }
+body.dark .lu-tabs.nav-tabs,
+body.dark .modal-product .nav-tabs {
+  background: linear-gradient(135deg, rgba(217,183,255,0.10), rgba(247,198,249,0.07));
+  border-color: rgba(217,183,255,0.22);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.25);
+}
+
+.lu-tabs.nav-tabs .nav-link,
 .modal-product .nav-tabs .nav-link {
-  color: var(--text-muted);
-  font-size: 0.84rem;
+  color: var(--p-lila-mid);
+  font-size: 0.82rem;
   font-family: var(--font-body);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.25px;
   border: none;
-  border-radius: 10px 10px 0 0;
-  padding: 9px 18px;
+  border-radius: 12px;
+  padding: 8px 16px;
   background: transparent;
-  transition: color 0.2s, background 0.2s;
+  transition: color 0.25s, background 0.25s, transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  position: relative;
+  overflow: hidden;
 }
-.modal-product .nav-tabs .nav-link:hover { color: var(--p-purple-deep); }
-body.dark .modal-product .nav-tabs .nav-link:hover { color: var(--p-pink-soft); }
-.modal-product .nav-tabs .nav-link.active {
+.lu-tabs.nav-tabs .nav-link i,
+.modal-product .nav-tabs .nav-link i {
+  font-size: 0.95rem;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.lu-tabs.nav-tabs .nav-link:hover,
+.modal-product .nav-tabs .nav-link:hover {
   color: var(--p-purple-deep);
-  background: var(--p-gray-warm);
-  border-bottom: 2px solid var(--p-purple-deep);
+  background: rgba(255,255,255,0.55);
+  transform: translateY(-1px);
 }
-body.dark .modal-product .nav-tabs .nav-link.active {
+body.dark .lu-tabs.nav-tabs .nav-link:hover,
+body.dark .modal-product .nav-tabs .nav-link:hover {
   color: var(--p-pink-soft);
   background: rgba(247,198,249,0.10);
-  border-bottom-color: var(--p-pink-soft);
+}
+
+/* Ripple/shine sutil al click */
+.lu-tabs.nav-tabs .nav-link::after,
+.modal-product .nav-tabs .nav-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.4) 0%, transparent 55%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.lu-tabs.nav-tabs .nav-link:active::after,
+.modal-product .nav-tabs .nav-link:active::after { opacity: 1; }
+
+/* Estado activo — el icono hace un pop */
+.lu-tabs.nav-tabs .nav-link.active i,
+.modal-product .nav-tabs .nav-link.active i {
+  transform: scale(1.18) rotate(-4deg);
+}
+
+/* Estado activo por tab — gradient acorde al color del panel */
+.lu-tabs.nav-tabs .nav-link.active[data-bs-target*="Info"],
+.modal-product .nav-tabs .nav-link.active[data-bs-target*="Info"] {
+  color: #fff;
+  background: linear-gradient(135deg, #682ABF, #7732D9);
+  box-shadow: 0 6px 18px rgba(104,42,191,0.35);
+}
+.lu-tabs.nav-tabs .nav-link.active[data-bs-target*="Uso"],
+.modal-product .nav-tabs .nav-link.active[data-bs-target*="Uso"] {
+  color: #fff;
+  background: linear-gradient(135deg, #9F84E6, #7732D9);
+  box-shadow: 0 6px 18px rgba(159,132,230,0.4);
+}
+.lu-tabs.nav-tabs .nav-link.active[data-bs-target*="Beneficios"],
+.modal-product .nav-tabs .nav-link.active[data-bs-target*="Beneficios"] {
+  color: #682ABF;
+  background: linear-gradient(135deg, #F6C6F9, #D9B7FF);
+  box-shadow: 0 6px 18px rgba(247,198,249,0.55);
+}
+body.dark .lu-tabs.nav-tabs .nav-link.active[data-bs-target*="Info"],
+body.dark .modal-product .nav-tabs .nav-link.active[data-bs-target*="Info"] {
+  background: linear-gradient(135deg, #7732D9, #9F84E6);
+  box-shadow: 0 6px 18px rgba(119,50,217,0.55);
+}
+body.dark .lu-tabs.nav-tabs .nav-link.active[data-bs-target*="Uso"],
+body.dark .modal-product .nav-tabs .nav-link.active[data-bs-target*="Uso"] {
+  background: linear-gradient(135deg, #D9B7FF, #9F84E6);
+  color: #2a1050;
+}
+body.dark .lu-tabs.nav-tabs .nav-link.active[data-bs-target*="Beneficios"],
+body.dark .modal-product .nav-tabs .nav-link.active[data-bs-target*="Beneficios"] {
+  background: linear-gradient(135deg, #F6C6F9, #e06ca1);
+  color: #2a1050;
+  box-shadow: 0 6px 18px rgba(247,198,249,0.5);
+}
+
+/* Responsive: en móviles compactos, los tabs pueden apilarse sin overflow */
+@media (max-width: 520px) {
+  .lu-tabs.nav-tabs,
+  .modal-product .nav-tabs { width: 100%; justify-content: center; }
+  .lu-tabs.nav-tabs .nav-link,
+  .modal-product .nav-tabs .nav-link {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.72rem;
+    padding: 7px 10px;
+  }
+  .lu-tabs.nav-tabs .nav-link span,
+  .modal-product .nav-tabs .nav-link span {
+    display: none;
+  }
 }
 .modal-product .tab-content {
   padding: 1rem 0;
@@ -150,6 +253,85 @@ body.dark .modal-product .nav-tabs .nav-link.active {
   margin-bottom: 8px;
 }
 .modal-product .tab-content i { color: var(--p-lila-mid); margin-top: 3px; }
+
+/* ---------- Color acento por pestaña ----------
+ * Cada panel (Información general / Modo de uso / Beneficios) recibe su
+ * propio tinte, borde lateral y color de iconos para que sea fácil
+ * distinguir visualmente de qué trata cada uno sin leer el título. */
+#tabInfo, #tabInfoPage,
+#tabUso, #tabUsoPage,
+#tabBeneficios, #tabBeneficiosPage {
+  padding: 0.95rem 1.1rem;
+  border-radius: 14px;
+  transition: background 0.45s ease, border-color 0.45s ease;
+}
+
+/* Información general — morado de marca */
+#tabInfo, #tabInfoPage {
+  background: linear-gradient(135deg, rgba(104,42,191,0.08) 0%, rgba(159,132,230,0.04) 100%);
+  border-left: 3px solid var(--p-purple-deep);
+  color: var(--p-purple-deep);
+}
+body.dark #tabInfo,
+body.dark #tabInfoPage {
+  background: linear-gradient(135deg, rgba(247,198,249,0.08) 0%, rgba(217,183,255,0.04) 100%);
+  border-left-color: var(--p-pink-soft);
+  color: var(--p-lavender-light);
+}
+
+/* Modo de uso — lila medio (proceso / pasos) */
+#tabUso, #tabUsoPage {
+  background: linear-gradient(135deg, rgba(159,132,230,0.12) 0%, rgba(217,183,255,0.06) 100%);
+  border-left: 3px solid var(--p-lila-mid);
+  color: var(--p-purple-vibrant);
+}
+#tabUso .step-item i,
+#tabUsoPage .step-item i {
+  color: #fff;
+  background: linear-gradient(135deg, var(--p-lila-mid), var(--p-purple-vibrant));
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+  box-shadow: 0 3px 10px rgba(159,132,230,0.35);
+}
+body.dark #tabUso,
+body.dark #tabUsoPage {
+  background: linear-gradient(135deg, rgba(217,183,255,0.14) 0%, rgba(247,198,249,0.06) 100%);
+  color: var(--p-lavender-light);
+}
+body.dark #tabUso .step-item i,
+body.dark #tabUsoPage .step-item i {
+  background: linear-gradient(135deg, var(--p-pink-soft), var(--p-lila-mid));
+  color: var(--p-purple-deep);
+  box-shadow: 0 3px 10px rgba(247,198,249,0.3);
+}
+
+/* Beneficios — rosa soft (resultado positivo) */
+#tabBeneficios, #tabBeneficiosPage {
+  background: linear-gradient(135deg, rgba(247,198,249,0.14) 0%, rgba(217,183,255,0.06) 100%);
+  border-left: 3px solid var(--p-pink-soft);
+  color: #a03a6b;
+}
+#tabBeneficios .benefit-item i,
+#tabBeneficiosPage .benefit-item i {
+  color: #2fae8e;
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+body.dark #tabBeneficios,
+body.dark #tabBeneficiosPage {
+  background: linear-gradient(135deg, rgba(247,198,249,0.16) 0%, rgba(159,132,230,0.06) 100%);
+  color: var(--p-pink-soft);
+}
+body.dark #tabBeneficios .benefit-item i,
+body.dark #tabBeneficiosPage .benefit-item i {
+  color: #5ed8b8;
+}
 
 /* Quantity control */
 .qty-control {
@@ -239,3 +421,156 @@ body.dark .btn-whatsapp-modal { color: #4fd884; }
 }
 .modal.show .modal-dialog { transform: scale(1); }
 .modal-backdrop.show { backdrop-filter: blur(4px); }
+
+/* ============================================================
+ * WA PICKER MODAL — elige número local vs nacional
+ * ============================================================ */
+.wa-picker-modal .modal-dialog { max-width: 500px; }
+.wa-picker-modal .modal-content {
+  background: var(--card-bg);
+  color: var(--text-main);
+  border-radius: 22px;
+  border: 1px solid var(--card-border);
+  overflow: hidden;
+}
+.wa-picker-modal .modal-header {
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  color: #fff;
+  border: none;
+  padding: 1.05rem 1.3rem;
+  position: relative;
+  overflow: hidden;
+}
+.wa-picker-modal .modal-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(80% 100% at 100% 0%, rgba(255,255,255,0.25), transparent 55%);
+  pointer-events: none;
+}
+.wa-picker-modal .modal-title {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+.wa-picker-modal .modal-title i {
+  background: rgba(255,255,255,0.25);
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+.wa-picker-modal .btn-close {
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+  position: relative;
+  z-index: 1;
+}
+.wa-picker-modal .modal-body { padding: 1.3rem 1.4rem; }
+
+.wa-picker-lead {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.1rem;
+}
+
+.wa-picker-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.wa-picker-option {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  background: transparent;
+  border: 1.5px solid var(--card-border);
+  border-radius: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.23,1,0.32,1),
+              background 0.22s ease,
+              border-color 0.22s ease,
+              box-shadow 0.22s ease;
+  font-family: var(--font-body);
+}
+.wa-picker-option:hover {
+  border-color: #25D366;
+  transform: translateY(-2px);
+  background: rgba(37,211,102,0.06);
+  box-shadow: 0 8px 22px rgba(37,211,102,0.25);
+}
+body.dark .wa-picker-option:hover {
+  background: rgba(37,211,102,0.14);
+}
+
+.wa-picker-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(37,211,102,0.35);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.wa-picker-option:hover .wa-picker-icon { transform: rotate(-6deg) scale(1.08); }
+
+/* Segundo icono: gradient morado-rosa para distinguir "nacional" */
+.wa-picker-option[data-wa-key="nacional"] .wa-picker-icon {
+  background: linear-gradient(135deg, #7732D9, #F6C6F9);
+  box-shadow: 0 6px 16px rgba(119,50,217,0.35);
+}
+
+.wa-picker-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wa-picker-label {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-heading);
+  line-height: 1.25;
+}
+.wa-picker-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.wa-picker-number {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: #25D366;
+  font-weight: 700;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+body.dark .wa-picker-number { color: #4bd981; }
+
+.wa-picker-arrow {
+  font-size: 1.5rem;
+  color: var(--p-lila-mid);
+  transition: transform 0.25s ease, color 0.22s ease;
+}
+.wa-picker-option:hover .wa-picker-arrow {
+  color: #25D366;
+  transform: translateX(4px);
+}
+
+@media (max-width: 420px) {
+  .wa-picker-option { grid-template-columns: 44px 1fr; }
+  .wa-picker-arrow { grid-column: 2; justify-self: end; margin-top: -6px; }
+  .wa-picker-icon { width: 44px; height: 44px; font-size: 1.1rem; }
+}

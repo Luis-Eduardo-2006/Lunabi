@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/admin.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/cuenta.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/carrito.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/skintest.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/components.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/main.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/chatbot.js\")"
+    ]
+  }
+}

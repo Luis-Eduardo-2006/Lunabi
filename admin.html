@@ -47,6 +47,9 @@
             <button class="admin-tab active" data-tab="dashboard" type="button">
               <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
             </button>
+            <button class="admin-tab" data-tab="pedidos" type="button">
+              <i class="bi bi-bag-check"></i> <span>Pedidos</span>
+            </button>
             <button class="admin-tab" data-tab="productos" type="button">
               <i class="bi bi-box-seam"></i> <span>Productos</span>
             </button>
@@ -197,6 +200,19 @@
                 <h3><i class="bi bi-clock-history"></i> Últimos productos agregados</h3>
                 <div class="admin-latest" id="latestProducts"></div>
               </div>
+            </section>
+
+            <!-- ========== PEDIDOS ========== -->
+            <section class="admin-panel" data-panel="pedidos">
+              <h2 class="admin-panel-title">Pedidos de clientes</h2>
+              <p class="admin-hint">Marca el avance de cada envío y las actualizaciones aparecen en vivo en la cuenta del cliente. El primer tramo es internacional (Corea → Perú) y el segundo es nacional.</p>
+
+              <div class="admin-orders-toolbar">
+                <div class="admin-orders-filters" id="adminOrdersFilters"></div>
+                <div class="admin-orders-stats" id="adminOrdersStats"></div>
+              </div>
+
+              <div class="admin-orders-list" id="adminOrdersList"></div>
             </section>
 
             <!-- ========== PRODUCTOS ========== -->
