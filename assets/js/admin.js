@@ -31,6 +31,37 @@
       return false;
     }
   }
+
+  function isRemote() { return !!(window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()); }
+
+  /* Cuando hay backend, replicamos los cambios a Supabase después de los
+   * escribimos localmente — así la tienda y el resto de usuarios los ven. */
+  function syncProduct(product, deleted) {
+    if (!isRemote()) return;
+    const op = deleted
+      ? window.LuApi.adminDeleteProduct(product.id)
+      : window.LuApi.adminUpsertProduct(product);
+    op.catch(e => console.warn('[admin] sync producto', e));
+  }
+  function syncBrand(brand, deleted) {
+    if (!isRemote()) return;
+    const op = deleted
+      ? window.LuApi.adminDeleteBrand(brand.id)
+      : window.LuApi.adminUpsertBrand(brand);
+    op.catch(e => console.warn('[admin] sync marca', e));
+  }
+  function syncSlide(slide, index, deleted) {
+    if (!isRemote()) return;
+    const op = deleted
+      ? window.LuApi.adminDeleteSlide(index)
+      : window.LuApi.adminUpsertSlide(slide);
+    op.catch(e => console.warn('[admin] sync diapositiva', e));
+  }
+  function syncOrderStage(orderId, stageKey) {
+    if (!isRemote()) return;
+    window.LuApi.updateOrderStage(orderId, stageKey).catch(e =>
+      console.warn('[admin] sync stage', e));
+  }
   function slugify(s) {
     return (s || '').toLowerCase()
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -947,6 +978,7 @@
         save(STORE_PRODUCTS, adminProducts);
         const pidx = (window.products || []).findIndex(p => p.id === editingProductId);
         if (pidx > -1) window.products[pidx] = product;
+        syncProduct(product, false);
         exitEditMode();
         renderProductsTable();
         renderDashboard();
@@ -960,6 +992,7 @@
         adminProducts.push(product);
         save(STORE_PRODUCTS, adminProducts);
         (window.products || []).push(product);
+        syncProduct(product, false);
         form.reset();
         images.reset(['']);
         updateSubcatOptions('');
@@ -990,6 +1023,7 @@
       if (!confirm(q)) return;
       const list = load(STORE_PRODUCTS).filter(p => p.id !== id);
       save(STORE_PRODUCTS, list);
+      syncProduct({ id }, true);
       if (isBase) {
         if (window.showToast) window.showToast('Revirtiendo al original…', 'info');
         setTimeout(() => window.location.reload(), 400);
@@ -1106,6 +1140,7 @@
       if (editingSlideIdx != null) {
         slides[editingSlideIdx] = slide;
         save(STORE_SLIDES, slides);
+        syncSlide(slide, editingSlideIdx, false);
         exitEditMode();
         renderSlidesList();
         renderDashboard();
@@ -1113,6 +1148,7 @@
       } else {
         slides.push(slide);
         save(STORE_SLIDES, slides);
+        syncSlide(slide, slides.length - 1, false);
         form.reset();
         form.querySelectorAll('.admin-image-input').forEach(c => {
           const u = c.querySelector('input[type="text"], input[type="url"]');
@@ -1138,6 +1174,7 @@
       const slides = load(STORE_SLIDES);
       slides.splice(i, 1);
       save(STORE_SLIDES, slides);
+      syncSlide(null, i, true);
       if (editingSlideIdx === i) exitEditMode();
       renderSlidesList();
       renderDashboard();
@@ -1278,6 +1315,7 @@
         save(STORE_BRANDS, adminBrands);
         const bidx = (window.brands || []).findIndex(b => b.id === editingBrandId);
         if (bidx > -1) window.brands[bidx] = brand;
+        syncBrand(brand, false);
         exitEditMode();
         renderBrandsTable();
         renderDashboard();
@@ -1293,6 +1331,7 @@
         adminBrands.push(brand);
         save(STORE_BRANDS, adminBrands);
         (window.brands || []).push(brand);
+        syncBrand(brand, false);
         form.reset();
         touched = false;
         renderBrandsTable();
@@ -1323,6 +1362,7 @@
       if (!confirm(q)) return;
       const list = load(STORE_BRANDS).filter(b => b.id !== id);
       save(STORE_BRANDS, list);
+      syncBrand({ id }, true);
       if (isBase) {
         if (window.showToast) window.showToast('Revirtiendo al original…', 'info');
         setTimeout(() => window.location.reload(), 400);
@@ -1390,10 +1430,10 @@
     const idx = map[email].findIndex(o => o.id === orderId);
     if (idx === -1) return;
     map[email][idx].stageKey = stageKey;
-    // Sincronizamos el status amigable
     if (stageKey === 'entregado') map[email][idx].status = 'entregado';
     else if (map[email][idx].status === 'entregado') map[email][idx].status = 'pendiente';
     saveOrdersMap(map);
+    syncOrderStage(orderId, stageKey);
   }
 
   function deleteOrder(email, orderId) {

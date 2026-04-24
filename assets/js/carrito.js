@@ -142,8 +142,29 @@
     return msg;
   }
 
-  function persistOrder() {
+  function persistOrder(waKey) {
     if (!cart.length) return null;
+    const items = cart.map(ci => {
+      const p = products.find(pr => pr.id === ci.id);
+      return {
+        id: ci.id,
+        qty: ci.qty,
+        nombre: p ? p.nombre : ('Producto #' + ci.id),
+        marca: p ? p.marca : '',
+        imagen: p && p.imagenes ? p.imagenes[0] : '',
+        precio: p ? Number(p.precio) : 0
+      };
+    });
+    const total = getCartTotal();
+
+    // Remoto: LuApi.createOrder (inserta en Supabase con RLS)
+    if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+      window.LuApi.createOrder({ items, total, waKey }).catch(e =>
+        console.warn('[order] remote insert', e)
+      );
+    }
+
+    // Fallback local siempre (para que "Mi cuenta" funcione también sin backend)
     try {
       const session = JSON.parse(localStorage.getItem('lunabi_session') || 'null');
       const key = session && session.email ? session.email : 'guest';
@@ -151,20 +172,8 @@
       const list = Array.isArray(all[key]) ? all[key] : [];
       const order = {
         id: 'ORD-' + Date.now().toString(36).toUpperCase(),
-        createdAt: Date.now(),
-        items: cart.map(ci => {
-          const p = products.find(pr => pr.id === ci.id);
-          return {
-            id: ci.id,
-            qty: ci.qty,
-            nombre: p ? p.nombre : ('Producto #' + ci.id),
-            marca: p ? p.marca : '',
-            imagen: p && p.imagenes ? p.imagenes[0] : '',
-            precio: p ? Number(p.precio) : 0
-          };
-        }),
-        total: getCartTotal(),
-        status: 'pendiente'
+        createdAt: Date.now(), items, total,
+        status: 'pendiente', wa_key: waKey || null
       };
       list.unshift(order);
       all[key] = list;
@@ -204,7 +213,7 @@
   function finalizeOrder(waKey) {
     const msg = buildWhatsAppOrder();
     if (!msg) return;
-    persistOrder();
+    persistOrder(waKey);
     if (typeof window.recordSales === 'function') {
       window.recordSales(cart);
     }

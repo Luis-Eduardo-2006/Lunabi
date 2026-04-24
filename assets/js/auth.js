@@ -55,7 +55,9 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  /* ---------------- API (usable por un backend en el futuro) ---------------- */
+  function isRemote() { return !!(window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()); }
+
+  /* ---------------- API (localStorage demo + Supabase Auth) ---------------- */
   async function registerUser({ nombre, email, password, confirm }) {
     nombre = (nombre || '').trim();
     email  = (email  || '').trim().toLowerCase();
@@ -64,6 +66,15 @@
     if (!validEmail(email)) throw new Error('El correo no tiene un formato válido.');
     if (!password || password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
     if (password !== confirm) throw new Error('Las contraseñas no coinciden.');
+
+    if (isRemote()) {
+      try {
+        await window.LuApi.signUp({ nombre, email, password });
+      } catch (e) { throw new Error(e.message || 'No se pudo crear la cuenta.'); }
+      const session = { nombre, email, createdAt: Date.now() };
+      setSession(session);
+      return session;
+    }
 
     const users = loadUsers();
     if (users.some(u => u.email === email)) {
@@ -84,6 +95,20 @@
     if (!validEmail(email)) throw new Error('El correo no tiene un formato válido.');
     if (!password) throw new Error('Ingresa tu contraseña.');
 
+    if (isRemote()) {
+      try {
+        await window.LuApi.signIn({ email, password });
+        const user = await window.LuApi.getUser();
+        const session = {
+          nombre: (user && user.nombre) || 'Usuaria',
+          email,
+          createdAt: (user && user.createdAt) || Date.now()
+        };
+        setSession(session);
+        return session;
+      } catch (e) { throw new Error(e.message || 'No se pudo iniciar sesión.'); }
+    }
+
     const users = loadUsers();
     const user = users.find(u => u.email === email);
     if (!user) throw new Error('No encontramos una cuenta con ese correo.');
@@ -96,6 +121,7 @@
   }
 
   function logoutUser() {
+    if (isRemote() && window.LuApi.signOut) { window.LuApi.signOut().catch(()=>{}); }
     clearSession();
     updateUserButton();
     if (typeof showToast === 'function') showToast('Sesión cerrada', 'info');

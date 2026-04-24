@@ -545,6 +545,21 @@
     }
   }
 
+  /* Carga síncrona-temprana de Supabase config + api.js. Se inyectan
+   * antes de injectComponents() para que window.LuApi esté disponible
+   * cuando main.js/carrito.js/admin.js hagan sus checks. api.js carga el
+   * SDK de Supabase bajo demanda sólo si el config trae url+anonKey. */
+  (function loadApi() {
+    if (document.getElementById('luSupaCfg')) return;
+    const cfg = document.createElement('script');
+    cfg.id = 'luSupaCfg';
+    cfg.src = 'assets/js/supabase.config.js';
+    document.head.appendChild(cfg);
+    const api = document.createElement('script');
+    api.src = 'assets/js/api.js';
+    document.head.appendChild(api);
+  })();
+
   // Auto-run at script load so main.js can wire handlers to injected elements.
   injectComponents();
 

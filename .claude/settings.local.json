@@ -7,7 +7,10 @@
       "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/skintest.js\")",
       "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/components.js\")",
       "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/main.js\")",
-      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/chatbot.js\")"
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/chatbot.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/api.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/data.js\")",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/auth.js\")"
     ]
   }
 }

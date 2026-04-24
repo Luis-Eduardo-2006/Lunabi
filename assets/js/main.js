@@ -131,15 +131,19 @@ document.addEventListener('click', (e) => {
 
   window.recordSales = function(items) {
     if (!Array.isArray(items) || !items.length) return;
-    const map = loadSales();
-    items.forEach(({ id, qty }) => {
-      const n = Number(id);
-      if (!n) return;
-      map[n] = (Number(map[n]) || 0) + (Number(qty) || 0);
-    });
-    saveSales(map);
+    // Si LuApi está en modo remoto, delega en Supabase vía RPC record_sale.
+    if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+      window.LuApi.recordSale(items).then(recomputeBestSellers).catch(()=>{});
+    } else {
+      const map = loadSales();
+      items.forEach(({ id, qty }) => {
+        const n = Number(id);
+        if (!n) return;
+        map[n] = (Number(map[n]) || 0) + (Number(qty) || 0);
+      });
+      saveSales(map);
+    }
     recomputeBestSellers();
-    // Si la página está visible, re-render inmediato del grid activo.
     if (typeof window.refreshBestSellerViews === 'function') {
       window.refreshBestSellerViews();
     }
@@ -174,6 +178,10 @@ document.addEventListener('click', (e) => {
     const active = idx === -1;
     if (active) favs.push(id); else favs.splice(idx, 1);
     saveFavs(favs);
+    // Si hay backend, sincroniza el toggle con Supabase (sin bloquear UI).
+    if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+      window.LuApi.toggleFavorite(id).catch(e => console.warn('[fav] sync', e));
+    }
     document.querySelectorAll(`[data-fav-id="${id}"]`).forEach(btn => {
       btn.classList.toggle('active', active);
       const icon = btn.querySelector('i');
@@ -903,3 +911,22 @@ if (document.readyState === 'loading') {
 } else {
   initApp();
 }
+
+/* Expuesto para que data.js re-renderice tras rehidratar desde Supabase.
+ * Re-dispatcha según la página activa sin re-engancharse a listeners globales. */
+window.rerenderCurrentPage = function() {
+  const page = (typeof getCurrentPage === 'function') ? getCurrentPage() : 'index';
+  switch (page) {
+    case 'index':          if (typeof renderHomePage === 'function') renderHomePage(); break;
+    case 'skincare':
+    case 'maquillaje':
+    case 'corporal':
+    case 'accesorios':
+    case 'sale':           if (typeof renderCategoryPageByKey === 'function') renderCategoryPageByKey(page); break;
+    case 'marcas':         if (typeof renderMarcasPage === 'function') renderMarcasPage(); break;
+    case 'marca-detalle':  if (typeof renderMarcaDetallePage === 'function') renderMarcaDetallePage(); break;
+    case 'producto':       if (typeof renderProductoPage === 'function') renderProductoPage(); break;
+    case 'carrito':        if (typeof renderCartPage === 'function') renderCartPage(); break;
+  }
+  if (typeof observeFadeUps === 'function') observeFadeUps();
+};

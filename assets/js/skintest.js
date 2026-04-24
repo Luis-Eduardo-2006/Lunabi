@@ -391,15 +391,16 @@
   }
 
   function persistResult(ans, routine) {
+    const productIds = routine.map(r => r.product.id);
+    // Remoto vía LuApi cuando haya backend — si no, fallback local.
+    if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+      window.LuApi.saveSkintest(ans, productIds).catch(e => console.warn('[skintest] remote', e));
+    }
     try {
       const session = JSON.parse(localStorage.getItem('lunabi_session') || 'null');
       const key = session && session.email ? session.email : 'guest';
       const all = JSON.parse(localStorage.getItem('lunabi_skintest') || '{}');
-      all[key] = {
-        answers: ans,
-        productIds: routine.map(r => r.product.id),
-        createdAt: Date.now()
-      };
+      all[key] = { answers: ans, productIds, createdAt: Date.now() };
       localStorage.setItem('lunabi_skintest', JSON.stringify(all));
     } catch (e) { /* noop */ }
   }

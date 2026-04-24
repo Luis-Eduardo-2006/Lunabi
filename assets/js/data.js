@@ -775,3 +775,35 @@ window.__baseBrandMaxId   = brands.reduce((m, b) => Math.max(m, b.id), 0);
     }
   } catch (e) { /* storage corrupt — ignore */ }
 })();
+
+/* ---------- Rehidratación remota desde Supabase ----------
+ * Si LuApi.isRemote() (config con url+anonKey), sobrescribimos products y
+ * brands con los datos del backend y avisamos a los módulos que re-rendericen.
+ * No bloqueamos el render inicial — primero se pinta con data.js local y
+ * después con los datos del servidor. */
+(function rehydrateFromRemote() {
+  async function go() {
+    if (!window.LuApi || !window.LuApi.isRemote()) return;
+    try {
+      const [remoteProducts, remoteBrands] = await Promise.all([
+        window.LuApi.listProducts(),
+        window.LuApi.listBrands()
+      ]);
+      if (Array.isArray(remoteBrands) && remoteBrands.length) {
+        brands.splice(0, brands.length, ...remoteBrands);
+      }
+      if (Array.isArray(remoteProducts) && remoteProducts.length) {
+        products.splice(0, products.length, ...remoteProducts);
+      }
+      if (typeof window.recomputeBestSellers === 'function') window.recomputeBestSellers();
+      // Re-render: si la página actual tiene renderer, lo dispara de nuevo
+      if (typeof window.rerenderCurrentPage === 'function') window.rerenderCurrentPage();
+      document.dispatchEvent(new Event('lunabi:data-ready'));
+    } catch (e) { console.warn('[data.js] rehidratación remota falló', e); }
+  }
+  // Espera a que LuApi esté cargado (api.js es async)
+  const iv = setInterval(() => {
+    if (window.LuApi) { clearInterval(iv); go(); }
+  }, 60);
+  setTimeout(() => clearInterval(iv), 8000);
+})();

@@ -4,13 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Lünabi — a static, **multi-page** Korean cosmetics (K-Beauty) storefront. Spanish-language UI targeting Peru (prices in `S/`, WhatsApp checkout). No build step, no package manager, no backend — everything is served as static HTML/CSS/JS files.
+Lünabi — a static, **multi-page** K-Beauty / cosmetics storefront. Spanish-language UI targeting Peru (prices in `S/`, **WhatsApp checkout** with two numbers: Huancayo local + envíos nacionales). No build step, no package manager. The site ships as plain HTML/CSS/JS and works fully offline against `localStorage`; an **optional Supabase backend** can be activated by filling in credentials (see "Backend" section). Base text content for `nosotros.html`, `terminos.html` and `faq.html` is sourced from [`InfoPieDePagina.txt`](InfoPieDePagina.txt) — use only that text when editing those pages.
 
 ## Running / developing
 
-Open `index.html` directly in a browser, or (recommended) serve the directory with any static server (e.g. `python -m http.server` / VS Code Live Server) from the project root so that `fetch`-style lookups and relative paths resolve cleanly. There are no build, lint, or test commands — edits to HTML/CSS/JS are reflected on refresh.
-
-External dependencies are loaded via CDN in every HTML: Bootstrap 5.3 (CSS + bundle JS), Bootstrap Icons 1.11, Google Fonts (**Bodoni Moda** for the logo and big titles, Syne as heading fallback, Epilogue for body text). Do not add a bundler or package manager unless explicitly requested.
+Open `index.html` directly in a browser, or (recommended) serve the directory with any static server (`python -m http.server`, VS Code Live Server, etc.) so `fetch`-style calls and relative paths resolve cleanly. There are no build, lint, or test commands — edits to HTML/CSS/JS are reflected on refresh. External deps are loaded via CDN: Bootstrap 5.3 (CSS + bundle JS), Bootstrap Icons 1.11, Google Fonts (Bodoni Moda / Syne / Epilogue). Supabase SDK is loaded on-demand by [`api.js`](assets/js/api.js) only if configured.
 
 ## File tree
 
@@ -18,45 +16,82 @@ External dependencies are loaded via CDN in every HTML: Bootstrap 5.3 (CSS + bun
 LÜNABI/
 ├── index.html, skincare.html, maquillaje.html, corporal.html, accesorios.html,
 │   sale.html, marcas.html, marca-detalle.html, producto.html, carrito.html,
-│   nosotros.html, contacto.html, faq.html, terminos.html, libro-reclamaciones.html
+│   nosotros.html, contacto.html, faq.html, terminos.html, libro-reclamaciones.html,
+│   login.html, registro.html,
+│   admin.html          (panel admin; CRUD productos/marcas/carrusel + dashboard + pedidos)
+│   cuenta.html         (user account: pedidos, favoritos, rutina del test, perfil)
+├── InfoPieDePagina.txt (fuente de verdad para Nosotros / Términos / FAQ)
+├── supabase/
+│   ├── schema.sql      (tablas + tipos + RLS + triggers + vista v_products + record_sale RPC)
+│   ├── storage.sql     (buckets products/brands/slides + políticas)
+│   └── README.md       (guía de despliegue paso a paso)
 ├── img/
-│   ├── logo/logo.webp           (favicon + navbar logo — user-provided asset)
-│   ├── banners/, productos/, marcas/   (empty, with README.txt placeholders)
+│   ├── logo/logo.webp  (favicon + navbar logo)
+│   └── banners/, productos/, marcas/   (placeholders)
 └── assets/
     ├── css/
-    │   ├── style.css    — tokens, reset, orbs, hero, page headers, filters/sort, forms, FAQ, WA float, toast, ripple, cursor
-    │   ├── navbar.css   — .navbar-glass (Bootstrap navbar + glassmorphism), brand image, pill nav-links with active underline, hover-to-open dropdowns, compact search/theme/cart utilities
-    │   ├── footer.css   — .lu-footer (always dark morado)
-    │   ├── cards.css    — .product-card and .brand-card tiles
-    │   ├── modal.css    — #productModal and Bootstrap tab styles
-    │   └── carrito.css  — drawer (overlay + aside) + full-page cart (carrito.html)
+    │   ├── style.css       tokens, reset, orbs, hero, page headers, filters/sort,
+    │   │                   forms, FAQ accordion + group titles, WA float,
+    │   │                   toast, ripple, cursor, contact-channels
+    │   ├── navbar.css      .navbar-glass + mega-menu dropdowns + utils (search/theme/user/cart)
+    │   ├── footer.css      .lu-footer (morado oscuro, con values/pay pills)
+    │   ├── cards.css       .product-card + .brand-card + .btn-fav (corazón) + .btn-fav-detail
+    │   ├── modal.css       #productModal + tabs pill gradient + #waPickerModal
+    │   ├── carrito.css     drawer + full-page cart + inline WA picker (Huancayo/Nacional)
+    │   ├── auth.css        login/registro + user-menu dropdown del navbar
+    │   ├── admin.css       panel admin (hero welcome, stat cards, tabs, tables,
+    │   │                   orders list + stage pills, image editor modal)
+    │   ├── cuenta.css      hero con nivel de membresía, stats, tabs, timeline de envío
+    │   ├── skintest.css    botón flotante con logo + modal del test dermatológico
+    │   └── chatbot.css     botón flotante "Luna" + ventana de chat con burbujas
     └── js/
-        ├── data.js       — `products` and `brands` globals (sole data source)
-        ├── theme.js      — IIFE; applies `body.dark` from localStorage at load, exposes `wireThemeToggle()`
-        ├── carrito.js    — IIFE; cart state + drawer UI + WhatsApp order builder; exposes `addToCart`, `updateQty`, `removeFromCart`, `showToast`, `initCart`, etc.
-        ├── buscador.js   — IIFE; live search (debounced 200ms); exposes `initSearch()`
-        ├── filtros.js    — IIFE; filter state, `applyFilters`, `buildFilterUI`, `renderCategoryGrid`, `setSourceProducts`, `initFilters`
-        ├── router.js     — IIFE; constants (`SKINCARE_CATS`, `MAQUILLAJE_CATS`, `SUBCAT_LABELS`, `PAGES`) and URL helpers (`getQueryParam`, `getCurrentPage`, `setActiveNavLink`)
-        ├── components.js — IIFE; runs at script-load and **injects** the navbar, footer, product modal, and cart drawer into their container divs
-        └── main.js       — orchestrator; defines `renderProductCard`, `observeFadeUps`, `openProductModal`, all page renderers, `initApp()` that wires everything after components have been injected
+        ├── data.js             `products` y `brands` globals; al final merge desde
+        │                       localStorage (admin overrides) + rehidratación remota
+        │                       desde Supabase si LuApi.isRemote()
+        ├── theme.js            IIFE; `body.dark` desde localStorage
+        ├── carrito.js          IIFE; estado cart + drawer + WA order persistido
+        │                       (local + Supabase); picker inline Huancayo/Nacional
+        ├── buscador.js         IIFE; búsqueda debounced 200ms
+        ├── filtros.js          IIFE; filtros por categoría/subcat/tipoPiel/marca/precio/sort
+        ├── router.js           IIFE; SKINCARE_STRUCTURE, MAQUILLAJE_STRUCTURE,
+        │                       CORPORAL_STRUCTURE, SUBCAT_LABELS, PAGES; helpers URL
+        ├── components.js       IIFE; inyecta navbar/footer/modales/cart drawer;
+        │                       también inyecta supabase.config.js + api.js y
+        │                       carga lazy skintest + chatbot en todas las páginas
+        ├── supabase.config.js  plantilla `window.LUNABI_SUPABASE = { url, anonKey }`
+        ├── api.js              `window.LuApi`: capa única con ramas REMOTE (Supabase)
+        │                       y LOCAL (localStorage). Carga SDK de Supabase on-demand
+        ├── auth.js             login/registro con Supabase Auth si remoto,
+        │                       SHA-256 + localStorage si local
+        ├── main.js             orquestador: ventas, favoritos, recompute best-sellers,
+        │                       WhatsApp picker delegado, renderProductCard, modal quick-view,
+        │                       renderHomePage/renderCategory.../renderProductoPage/etc.,
+        │                       initApp() dispatch, rerenderCurrentPage()
+        ├── admin.js            CRUD productos/marcas/diapositivas + panel Pedidos
+        │                       con stage picker; sincroniza a Supabase vía LuApi
+        ├── cuenta.js           Mi cuenta: nivel de membresía, pedidos con timeline
+        │                       de envío (2 tramos: internacional + nacional), favoritos,
+        │                       rutina guardada del test, perfil + logout
+        ├── skintest.js         botón flotante + modal con 7 preguntas dermatológicas
+        │                       y generador de rutina 5-8 pasos desde el catálogo
+        └── chatbot.js          botón flotante "Luna" + chat con 20+ intents entrenados
+                                desde InfoPieDePagina.txt
 ```
 
 ## Page skeleton
 
-Every HTML file follows the same shell. Page-specific content goes inside `<main id="main-content">`; the navbar / footer / modal / cart drawer are **injected by `components.js`** into empty container divs:
-
 ```html
-<body data-page="skincare">                      <!-- router reads this filename key -->
+<body data-page="skincare">                       <!-- router reads this filename key -->
   <div class="bg-orbs">…</div>                    <!-- celestial background -->
   <div id="navbar-container"></div>               <!-- filled by components.js -->
   <main id="main-content">
-    <!-- page-specific markup (hero, filter sidebar, form, accordion, …) -->
+    <!-- page-specific markup -->
   </main>
-  <div id="modal-container"></div>                <!-- filled by components.js -->
-  <div id="carrito-drawer"></div>                 <!-- filled by components.js -->
-  <div id="footer-container"></div>               <!-- filled by components.js -->
-  <div id="toast-container"></div>                <!-- manual div; toasts appended here -->
-  <a class="whatsapp-float">…</a>
+  <div id="modal-container"></div>                <!-- product modal + auth modal + WA picker modal + image editor -->
+  <div id="carrito-drawer"></div>                 <!-- cart drawer with inline WA picker -->
+  <div id="footer-container"></div>
+  <div id="toast-container"></div>
+  <a class="whatsapp-float">…</a>                 <!-- intercepted globally → opens WA picker -->
 
   <!-- script order is load-bearing — don't rearrange -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -66,58 +101,168 @@ Every HTML file follows the same shell. Page-specific content goes inside `<main
   <script src="assets/js/buscador.js"></script>
   <script src="assets/js/filtros.js"></script>
   <script src="assets/js/router.js"></script>
-  <script src="assets/js/components.js"></script>  <!-- injects DOM synchronously -->
-  <script src="assets/js/main.js"></script>        <!-- wires everything -->
+  <script src="assets/js/components.js"></script>   <!-- injects DOM + supabase.config.js + api.js + skintest + chatbot -->
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/main.js"></script>
 </body>
 ```
 
-## Initialization order (why the script order matters)
+`admin.html` loads `admin.js` before `main.js`; `cuenta.html` loads `cuenta.js` before `main.js`. All floats (`.whatsapp-float`, logo skintest, chatbot, chat) live only once and are either hardcoded in HTML (WA float) or injected dynamically by `components.js`.
 
-Scripts live at the end of `<body>`, so by the time they run the body is fully parsed. Order:
+## Initialization order
 
-1. **bootstrap.bundle** → Modal / Tab / Carousel classes available.
-2. **data.js** → `products` and `brands` globals exist.
-3. **theme.js** (IIFE) → reads `localStorage['lunabi-theme']`, adds `body.dark` immediately. Exposes `wireThemeToggle()` for later.
-4. **carrito.js, buscador.js, filtros.js, router.js** (IIFEs) → define helpers and init functions on `window`, but do NOT attach DOM listeners yet — the navbar/footer/modal/cart drawer haven't been injected.
-5. **components.js** (IIFE) → runs `injectComponents()` at parse time, filling `#navbar-container`, `#footer-container`, `#modal-container`, `#carrito-drawer` with their template HTML. Also populates the Marcas dropdown from `brands`.
-6. **main.js** → defines shared helpers (`renderProductCard`, `observeFadeUps`, modal logic, page renderers) and calls `initApp()`. `initApp()` wires theme toggle, cart, search, nav dropdowns, modal, effects, then dispatches on `getCurrentPage()` to the right page renderer (`renderHomePage`, `renderCategoryPageByKey`, `renderMarcasPage`, `renderMarcaDetallePage`, `renderProductoPage`, `renderCartPage`, `initContactoForm`, `initReclamacionesForm`).
+1. **bootstrap.bundle** — Modal / Tab / Carousel available.
+2. **data.js** — populates `products` / `brands`, merges admin overrides from localStorage (upsert by id), captures `window.__baseProductMaxId` / `__baseBrandMaxId` **before** merge so the admin distinguishes "nuevo" vs "editado", then fires a rehydration from Supabase if `LuApi.isRemote()`.
+3. **theme.js** — applies `body.dark` immediately to minimise FOUC.
+4. **carrito.js, buscador.js, filtros.js, router.js** — register helpers on `window`; do NOT attach DOM listeners yet.
+5. **components.js** — `injectComponents()` fills the 4 container divs synchronously, **also** `<script>`-injects `supabase.config.js`, `api.js`, `skintest.js`+`skintest.css`, `chatbot.js`+`chatbot.css` into `<head>`. Supabase SDK is fetched only when `LuApi.ready()` is first called.
+6. **admin.js / cuenta.js** (only on their pages).
+7. **auth.js** — defines `registerUser/loginUser/logoutUser`; branches by `LuApi.isRemote()`.
+8. **main.js** — defines `WA_NUMBERS` (Huancayo local + Nacional), sales tracking, favorites, `renderProductCard`, `openProductModal`, page renderers; calls `initApp()` which dispatches by `getCurrentPage()`.
 
-**Do not move `components.js` before other modules** — modules rely on it to have injected the DOM before their `init*()` functions run, but the modules themselves are defined before `components.js`, which is fine because they only register functions on `window`.
+Don't move `components.js` before the other modules — those register globals first, `components.js` only injects DOM and auxiliary scripts.
 
 ## Architecture details
 
-- **`data.js`** — `brands` (`{id, nombre, slug, logo, descripcion}`) and `products` (`{id, slug, nombre, marca, categoria, tipoPiel[], precio, precioAntes, imagenes[], descripcion, modoDeUso[], beneficios[], masVendido, enOferta}`). Products reference brands by `slug`. `tipoPiel` is an array so one product can match multiple skin-type filters. `categoria` is a free-form slug; `filtros.js`/`router.js` groups them via `SKINCARE_CATS` and `MAQUILLAJE_CATS`.
+### Data layer
 
-- **Routing model** — true multi-page. Each section has its own `.html` file. Navigation uses normal `<a href="…">` links, not hash routing. Category filtering is deep-linked via query strings:
-  - `skincare.html?categoria=serum` → opens skincare and auto-checks the Serum pill
-  - `maquillaje.html?categoria=rostro`
-  - `marca-detalle.html?marca=beauty-of-joseon`
-  - `producto.html?id=3`
-  Each page reads its params on load via `getQueryParam()` in `router.js`.
+- **`data.js`** — `brands` (`{id, nombre, slug, logo, descripcion}`) and `products` (`{id, slug, nombre, marca, categoria, subcategoria, tipoPiel[], precio, precioAntes, imagenes[], descripcion, modoDeUso[], beneficios[], masVendido, enOferta}`). Products reference brands by `slug`. `tipoPiel` is an array. `categoria` is grouped via `SKINCARE_STRUCTURE`/`MAQUILLAJE_STRUCTURE`/`CORPORAL_STRUCTURE` in `router.js`.
+- **Admin overrides** (`lunabi_admin_products`, `lunabi_admin_brands`): merged into `products`/`brands` with upsert semantics — if id exists, the admin version replaces the base; if not, it's appended.
+- **Remote rehydration**: after merge, if `LuApi.isRemote()`, `data.js` fetches from Supabase view `v_products` and table `brands`, replaces the arrays in-place, then calls `window.rerenderCurrentPage()` to refresh the current view.
 
-- **Logo** — every navbar renders `<img src="img/logo/logo.webp" alt="Lünabi" height="44">` inside `.navbar-brand` (from the components template). In day mode the image displays unmodified; `body.dark .navbar-glass .navbar-brand img { filter: brightness(0) invert(1); }` inverts it to clean white for night mode. If the source PNG/WEBP is dark-on-transparent, that filter produces correct white output. The same file powers the `<link rel="icon">` favicon.
+### API layer
 
-- **Cart** — persisted to `localStorage['lunabi_cart']` as `[{id, qty}]`. Prices/images/names are re-resolved from `products` on every render — never store denormalised product data in the cart. `carrito.js` exposes `addToCart`, `removeFromCart`, `updateQty`, `clearCart`, `sendWhatsAppOrder`, etc. on `window` so inline `onclick="addToCart(3)"` handlers inside the card template work. The full-page `carrito.html` reuses `renderCartPage()` in `main.js`, which `updateCartUI()` calls whenever the cart changes so the page stays in sync with the drawer.
+- **`supabase.config.js`** — `window.LUNABI_SUPABASE = { url, anonKey }`. Empty = offline mode.
+- **`api.js`** — `window.LuApi` with ~20 methods. Each method has two branches:
+  - **REMOTE**: `ensureSupabase()` lazy-loads the SDK, then uses `client.from(...).select/insert/update` or `client.rpc(...)`.
+  - **LOCAL**: reads/writes `localStorage` with the same object shape the rest of the code expects.
+- Methods: `listProducts`, `listBrands`, `listSlides`, `signUp/signIn/signOut/getUser`, `listFavorites/toggleFavorite`, `saveSkintest/getMySkintest`, `createOrder/listMyOrders/listAllOrders/updateOrderStage`, `recordSale/getSalesMap`, `adminUpsertProduct/adminDeleteProduct`, `adminUpsertBrand/adminDeleteBrand`, `adminUpsertSlide/adminDeleteSlide`, `getSetting`, `isRemote()`.
+- **Pattern**: every other module checks `window.LuApi && window.LuApi.isRemote()` before calling the API. Writes are done **to both** storages when possible so the UX (e.g. Mi cuenta) never blanks on network hiccups.
 
-- **Filters** — `filterState` in `filtros.js` holds `subcats`, `tiposPiel`, `marcas` (Sets), price bounds, and `sort`. `applyFilters(sourceProducts)` composes them; the `best` sort pushes `masVendido` first. `buildFilterUI(cats, showSubcats)` rebuilds the sidebar against the current `sourceProducts`: the brand list and price slider bounds are per-page. Change events are delegated from `#filtersBody`; price dual slider has its own `input` listener. Each category/brand-detail page calls `setSourceProducts()` + `buildFilterUI()` + `renderCategoryGrid()` in its page renderer.
+### Routing
 
-- **Theme toggle** — `applyTheme('day'|'night')` adds/removes `body.dark` and swaps the icon (sun=day, moon=night); persisted as `lunabi-theme`. Default is `'day'`. `theme.js` applies the class immediately at script load to minimise FOUC — but because scripts live at the end of `<body>`, a ~50ms flash may still occur on cold loads with night mode preferred.
+True multi-page. Query strings deep-link filters:
 
-- **Product modal** — still available site-wide via `window.openProductModal(id)`, but the primary "view detail" flow now navigates to `producto.html?id=…` (which has its own gallery + tabs). The modal remains wired by `initModal()` in `main.js` in case you want to re-add in-place quick-view later.
+- `skincare.html?categoria=serum[&tipo=foam]`
+- `marca-detalle.html?marca=beauty-of-joseon`
+- `producto.html?id=3`
 
-- **Search** — debounced 200ms, matches `products.nombre`/`categoria` and `brands.nombre`, renders into the injected `#searchResults` dropdown as **anchors** that navigate to `producto.html?id=` or `marca-detalle.html?marca=`.
+`getQueryParam()` in `router.js` reads params; `renderProductoPage()` in `main.js` does the lookup.
 
-- **WhatsApp** — `WA_NUMBER` is set on `window` at the top of `main.js` (placeholder `51XXXXXXXXX`). Used by the cart order builder, product CTA, contact form, reclamaciones form, and the floating button. Update it in one place.
+### Cart + two WhatsApp numbers
 
-- **CSS design system** — `style.css` holds all the semantic tokens in `:root`. Palette constants: `--p-purple-deep` `#682ABF`, `--p-purple-vibrant` `#7732D9`, `--p-pink-soft` `#F6C6F9`, `--p-lavender-light` `#D9B7FF`, `--p-lila-mid` `#9F84E6`, `--p-white-warm` `#F2F2F2`, `--p-beige-soft` `#F5EFE8`, `--p-gray-warm` `#EAE7F2`. Semantic tokens (`--bg-main`, `--text-heading`, `--card-bg`, `--nav-bg`, `--modal-bg`, etc.) are redefined inside `body.dark` — most components theme themselves automatically via the tokens. Follow the 60-30-10 rule: 60% neutrals, 30% pastels, 10% intense purples. Theme transitions are 0.45s. The footer is intentionally dark morado (`#1a0f2e`) in both modes.
+- Cart persisted to `localStorage['lunabi_cart']` as `[{id, qty}]`. Prices/images/names re-resolved from `products` every render.
+- **Two WhatsApp numbers** in `main.js`:
+  ```js
+  window.WA_NUMBERS = {
+    local:    { number: '51XXXXXXXXX', label: 'Huancayo y alrededores', hint: '…' },
+    nacional: { number: '51YYYYYYYYY', label: 'Envíos nacionales',      hint: '…' }
+  };
+  ```
+- `window.openWhatsApp(message)` opens the **global** modal picker (`#waPickerModal` in `components.js`) — used by WA float, product modal/page, contact form, reclamaciones form, footer icon, chatbot references.
+- The **cart drawer** has its own **inline** picker inside the footer: clicking "Enviar pedido por WhatsApp" collapses the primary row and expands two Huancayo/Nacional options in place (no modal). See `.cart-footer-wa` in `components.js` + `toggleCartWaPicker()` + `finalizeOrder(waKey)` in `carrito.js`.
+- A global delegated click listener in `main.js` intercepts `.whatsapp-float` and `.lu-wa-link` clicks and calls `openWhatsApp('')` so hardcoded `<a href>` in the 15 HTMLs never need to be edited individually.
+
+### Orders + shipment tracking
+
+- When the user finalises a WA order, `carrito.js`:
+  1. `persistOrder(waKey)` — saves a full snapshot (items with nombre/marca/imagen/precio, total, createdAt, stageKey=null) to `localStorage['lunabi_orders'][email|'guest']`. If remote, also `LuApi.createOrder()` which inserts into `orders` + `order_items`.
+  2. `window.recordSales(cart)` — increments sales map (local + `record_sale` RPC on Supabase).
+  3. `window.open('https://wa.me/…')` with the chosen number.
+- **6-stage timeline** (`cuenta.js` `SHIPMENT_STAGES`): `confirmado` (0h) → `preparacion` (+24h) → `internacional` (+72h) → `aduana` (+264h, 11d) → `nacional` (+360h, 15d) → `entregado` (+432h, 18d). First 4 stages are the **international leg** (Corea → Perú), last 2 are the **national leg**. Matches the 15–20 días hábiles of `InfoPieDePagina.txt`.
+- **Auto-compute vs manual**: if `order.stageKey` is set by admin, the timeline uses it; otherwise `computeStages()` infers current stage by hours elapsed. `inferStatus()` maps stages to the status badge (pendiente/confirmado/enviado/entregado).
+- Admin panel → **tab Pedidos**: lists flattened orders from all users, filter chips per stage, 6-pill stage picker per card, "Volver a automático" to unset manual, delete button. Calls `LuApi.updateOrderStage()` when remote.
+
+### Admin panel (`admin.html`)
+
+Sidebar with 5 tabs: Dashboard · **Pedidos** · Productos · Carrusel · Marcas. `admin.js`:
+
+- **Dashboard**: greeting (hora + nombre), ring SVG de salud del catálogo (% de fichas completas con ≥2 imágenes, desc ≥40 chars, modoDeUso, beneficios, tipoPiel), 8 KPIs animados (con `animateCounter`), 4 bar-charts (categoría / top marcas / precio buckets / cobertura tipo de piel), insights autogenerados (top-seller, unidades vendidas, veredicto de salud, resumen de descuentos), lista "Necesita atención" (productos incompletos + marcas sin productos), últimos 5 productos.
+- **Productos**: form con slug auto (readonly desde `slugify(nombre)` + unicidad), selects anidados categoría→subcategoría, repeater de imágenes con **image editor modal** (crop + zoom + pan, exporta a tamaño exacto por slot: 800×800 producto, 400×400 marca, 1600×900 banner). Soporta editar base products (guarda override) y admin-added; "Revertir al original" borra la entrada admin.
+- **Marcas / Carrusel**: mismo patrón editar + upsert + revert.
+- **Etiquetas**: `admin` chip rosa = nuevo, `editado` chip dorado = override de base.
+- Syncs a Supabase via `syncProduct/syncBrand/syncSlide/syncOrderStage` (fire-and-forget si remoto).
+
+### Mi cuenta (`cuenta.html`)
+
+Sin gate — acceso directo como el admin. Si no hay sesión, usa perfil "Invitada" con datos de `guest`. Secciones:
+
+- **Hero**: avatar con inicial, nivel de membresía (Bronce/Plata/Oro/Platino según total gastado con barra de progreso al siguiente nivel).
+- **4 stats**: pedidos, total gastado, favoritos, pasos de rutina.
+- **Tabs**:
+  - **Pedidos** — cada tarjeta muestra los items + **timeline de envío expandible** con 2 cards (tramo internacional / nacional) y los 6 pasos con dots (done/current/pending) y fechas estimadas. Botones "Repetir pedido" y "Marcar entregado".
+  - **Favoritos** — grid con `renderProductCard` + "Añadir todo al carrito".
+  - **Mi rutina** — resultado guardado del test con tags del perfil, pasos numerados, "Añadir toda la rutina" + "Repetir test".
+  - **Perfil** — nombre/email/miembro desde + logout. En modo invitada → CTA login/registro.
+
+### Skintest (módulo flotante)
+
+- Botón flotante (posición `bottom: 100px`, sobre WhatsApp) con logo y halo conic-gradient rotante + shine.
+- Modal con 7 preguntas dermatológicas (tipo de piel, preocupación, edad, exposición solar, textura, experiencia, exfoliación), barra de progreso, auto-avance tras seleccionar.
+- `buildRoutine(answers)` arma 5–8 pasos en orden dermatológico: limpieza → tónico → serum (por keyword de la preocupación: BHA, arbutin, retinol, hialurónico, centella, etc.) → hidratante → SPF → contorno (si ≥30 años) → sleeping mask (piel seca/deshidratada) → exfoliante (si no exfolia y nivel intermedio+).
+- Persiste resultado (`answers` + `productIds`) en `lunabi_skintest[email|'guest']` y en Supabase si remoto.
+
+### Chatbot "Luna"
+
+- Botón flotante a `bottom: 176px` (arriba del skintest). Ventana de chat estilo messenger.
+- **20+ intents** entrenados desde `InfoPieDePagina.txt` con scoring por frase completa (×10) / token exacto (×2) / prefijo (×1), umbral mínimo de 6 puntos.
+- Cada intent puede traer `products` (filtro del catálogo) y `chips` (sugerencias contextuales que cambian por tema).
+- Typing indicator con delay proporcional al largo de la respuesta.
+
+### Favorites (heart)
+
+- `lunabi_favs` en localStorage como `[id,id,...]`. `toggleFavorite(id)` actualiza todos los botones con `[data-fav-id="X"]` al mismo tiempo (card chica + botón grande centrado del detalle + modal).
+- Si remoto, sincroniza con `LuApi.toggleFavorite()` (tabla `favorites` con PK compuesta user_id+product_id).
+
+### Best-sellers dinámicos
+
+- Tras cada pedido, `main.js` `recomputeBestSellers()` asigna `masVendido = true` a los **top K** productos por ventas (K = `clamp(3, ceil(catalog × 15%), 8)`). Si no hay ventas, respeta los flags originales capturados en `originalFlags`.
+- El contador de ventas en `localStorage['lunabi_ventas']` se alimenta desde `recordSales(items)`; en modo remoto se delega a `LuApi.recordSale` → `record_sale(product_id, qty)` RPC con `security definer`.
+
+### Tabs color-coded (producto)
+
+Los 3 tabs de la ficha de producto (`#productModal` y `producto.html`) tienen:
+
+- **Icono** por tab: `bi-info-circle-fill` / `bi-list-check` / `bi-check2-circle`.
+- **Gradient activo distinto**: Info → morado deep, Uso → lila, Beneficios → rosa con texto morado.
+- **Paneles tintados**: cada `<div class="tab-pane">` tiene su propio border-left accent y background sutil que casa con el tab.
+- Los pasos del modo de uso tienen icono en círculo gradient; los beneficios tienen check verde.
+
+### Contacto
+
+- **5 canales** en cards con color de marca: Facebook (`#1877F2`), Messenger, WhatsApp, Instagram (gradient clásico), TikTok (fondo negro con glitch turquesa/rosa), correo (morado Lünabi).
+- **Footer** también lleva iconos WhatsApp, Instagram, Facebook, TikTok (el de WA abre el picker Huancayo/Nacional).
+
+## Backend (Supabase, opcional)
+
+Ver [`supabase/README.md`](supabase/README.md) para el procedimiento completo. Resumen:
+
+1. Crear proyecto en supabase.com.
+2. SQL Editor → ejecutar [`supabase/schema.sql`](supabase/schema.sql) y después [`supabase/storage.sql`](supabase/storage.sql).
+3. Copiar `Project URL` + `anon key` a [`assets/js/supabase.config.js`](assets/js/supabase.config.js).
+4. `Ctrl+F5` — todos los módulos automáticamente empiezan a usar Supabase.
+5. Registrarse desde `registro.html` → en Supabase Table Editor marcar `is_admin = true` en la fila correspondiente de `profiles`.
+
+**Tablas**: `profiles` (extiende `auth.users`), `brands`, `products`, `hero_slides`, `orders`, `order_items`, `favorites`, `skintest_results`, `sales`, `site_settings`. Vista `v_products` con campos renombrados a camelCase (`tipoPiel`, `precioAntes`, etc.) para no refactorizar renderers. Función `record_sale(product_id, qty)` RPC pública con `security definer`. RLS: catálogo read público + write solo `is_admin()`; pedidos: user CRUD los suyos + admin todo; favoritos/skintest: solo dueño; ventas: read público, write vía RPC. Storage buckets `products/brands/slides` con read público y write admin.
+
+Si `supabase.config.js` tiene url+anonKey vacíos, todo vuelve a correr en modo localStorage sin errores.
+
+## Design system (CSS tokens)
+
+`style.css` expone semantic tokens en `:root` y los redefine en `body.dark`. Paleta:
+
+- `--p-purple-deep` `#682ABF`, `--p-purple-vibrant` `#7732D9`, `--p-pink-soft` `#F6C6F9`, `--p-lavender-light` `#D9B7FF`, `--p-lila-mid` `#9F84E6`, `--p-white-warm` `#F2F2F2`, `--p-beige-soft` `#F5EFE8`, `--p-gray-warm` `#EAE7F2`.
+
+Regla 60-30-10: 60% neutros, 30% pastel, 10% morados intensos. Transiciones de tema 0.45s. Footer siempre morado oscuro `#1a0f2e`.
 
 ## Conventions
 
-- All user-facing copy is Spanish.
-- Product and brand identifiers are Spanish slugs (`beauty-of-joseon`, `serum`, `limpieza`). Keep new entries consistent.
-- Every page sets `<body data-page="<key>">` where `<key>` matches the filename without extension — `main.js` reads this via `getCurrentPage()` to decide which renderer to run.
-- The five category routes (`skincare`, `maquillaje`, `corporal`, `accesorios`, `sale`) and `marca-detalle` share the **same** sidebar/sort/grid markup; only the `<h1>` / `<p>` seed text differs. Adding a new category = copy `skincare.html`, update `data-page`, title, subtitle, and add a matching entry in `PAGES` inside `router.js`.
-- Navbar / footer / modal / cart drawer live only in `components.js` — when changing them, update the template strings there, not per-page.
-- The navbar uses Bootstrap's `.navbar.navbar-expand-lg.fixed-top` shell with a custom `.navbar-glass` class for the frosted look. Dropdowns open on **hover** via CSS on desktop (`.nav-item.dropdown:hover > .dropdown-menu { display: block }`) and as inline-stacked blocks on mobile (inside the collapsed `.navbar-collapse`). No `data-bs-toggle="dropdown"` is used — clicking a parent nav-link always navigates via `href`.
-- `#home` in `index.html` has `padding-top: calc(var(--nav-h-top) + var(--nav-h-bot))` — if you change navbar heights, update the tokens, not the section.
-- Don't commit real `logo.webp` or product images to this folder tree here — the `img/` READMEs document expected locations and sizes.
+- Todo el copy es en español.
+- Slugs en español (`beauty-of-joseon`, `serum`, `limpieza`) — consistentes con los existentes.
+- Cada página HTML declara `<body data-page="<filename-sin-ext>">` — `main.js` lo lee por `getCurrentPage()`.
+- Las 5 rutas de categoría (`skincare`, `maquillaje`, `corporal`, `accesorios`, `sale`) + `marca-detalle` comparten sidebar/sort/grid. Añadir categoría = copiar `skincare.html`, actualizar `data-page`, título/subtítulo y añadir entrada en `PAGES` de `router.js`.
+- Navbar / footer / modales / cart drawer viven **solo** en `components.js`. Editarlos allí, no por HTML.
+- La navbar usa Bootstrap `.navbar.navbar-expand-lg.fixed-top` con `.navbar-glass`. Dropdowns en desktop **hover** (CSS); en móvil, colapsados dentro de `.navbar-collapse`. No se usa `data-bs-toggle="dropdown"`.
+- Nuevas persistencias → pásalas por `LuApi` (en `api.js`) con ramas REMOTE/LOCAL, no escribas directo a localStorage desde módulos de producto.
+- Nuevas features flotantes/globales → considera cargarlas lazy desde `components.js` via `loadModule(id, css, js)` para no editar los 15 HTMLs.
+- Tras edits CSS/JS avisa al usuario de hacer `Ctrl+F5` (hard refresh).
