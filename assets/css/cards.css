@@ -1,0 +1,428 @@
+/* ===== LÜNABI — Product Cards ===== */
+
+.product-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.23,1,0.32,1),
+              box-shadow 0.35s ease,
+              border-color 0.3s ease,
+              background 0.45s ease;
+  position: relative;
+}
+.product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--p-lila-mid);
+}
+
+.product-card .card-img-wrap {
+  position: relative;
+  height: 220px;
+  background: var(--p-beige-soft);
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.45s ease;
+}
+body.dark .product-card .card-img-wrap { background: rgba(255,255,255,0.04); }
+.product-card .card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 18px;
+  transition: transform 0.4s ease;
+}
+.product-card:hover .card-img-wrap img { transform: scale(1.05); }
+
+/* Wrapper para imagen + botón de favorito (anchor no puede contener button). */
+.product-card .card-media { position: relative; }
+
+/* Botón corazón de favoritos — esquina inferior derecha del área de imagen */
+.product-card .btn-fav {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(104,42,191,0.12);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  color: var(--p-purple-deep);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(104,42,191,0.18);
+  transition: transform 0.22s ease, background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+  z-index: 3;
+}
+.product-card .btn-fav:hover {
+  transform: scale(1.1);
+  background: var(--p-pink-soft);
+  color: var(--p-purple-deep);
+  box-shadow: 0 6px 18px rgba(247,198,249,0.55);
+}
+.product-card .btn-fav.active {
+  color: #e53e6b;
+  background: rgba(255,255,255,0.96);
+  border-color: rgba(229,62,107,0.35);
+}
+.product-card .btn-fav.active i { animation: favPop 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes favPop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+body.dark .product-card .btn-fav {
+  background: rgba(26,15,46,0.78);
+  color: var(--p-lavender-light);
+  border-color: rgba(217,183,255,0.25);
+}
+body.dark .product-card .btn-fav:hover {
+  background: rgba(247,198,249,0.22);
+  color: var(--p-pink-soft);
+}
+body.dark .product-card .btn-fav.active {
+  color: var(--p-pink-soft);
+  background: rgba(26,15,46,0.85);
+  border-color: rgba(247,198,249,0.45);
+}
+
+/* Badges on card image */
+.badge-cat {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: var(--p-lavender-light);
+  color: var(--p-purple-deep);
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+body.dark .badge-cat {
+  background: rgba(217,183,255,0.18);
+  color: var(--p-lavender-light);
+}
+.badge-sale {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: var(--p-pink-soft);
+  color: var(--p-purple-deep);
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.6px;
+  box-shadow: 0 2px 10px rgba(247,198,249,0.55);
+}
+body.dark .badge-sale {
+  background: rgba(247,198,249,0.20);
+  color: var(--p-pink-soft);
+}
+.badge-bestseller {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: var(--p-purple-deep);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 4px 11px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 10px rgba(104,42,191,0.38);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 2;
+}
+body.dark .badge-bestseller { background: var(--p-purple-vibrant); }
+/* when bestseller badge exists, push category badge down */
+.product-card .card-img-wrap .badge-bestseller ~ .badge-cat { top: 44px; }
+
+.product-card .card-body { padding: 1rem 1rem 0.9rem; }
+.product-card .card-brand {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--p-lila-mid);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.product-card .card-brand:hover { color: var(--p-purple-deep); }
+body.dark .product-card .card-brand:hover { color: var(--p-pink-soft); }
+.product-card .card-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0.4rem 0 0.55rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: pointer;
+  line-height: 1.3;
+  color: var(--text-main);
+}
+.product-card .card-price {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1.12rem;
+  color: var(--p-purple-vibrant);
+}
+body.dark .product-card .card-price { color: var(--p-pink-soft); }
+.product-card .card-price .old-price {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-decoration: line-through;
+  margin-right: 6px;
+  font-weight: 400;
+}
+
+.product-card .btn-add {
+  width: 100%;
+  margin-top: 0.85rem;
+  padding: 10px 0;
+  background: var(--p-purple-deep);
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.3px;
+  transition: background 0.25s, transform 0.2s, box-shadow 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+.product-card .btn-add:hover {
+  background: var(--p-purple-vibrant);
+  box-shadow: 0 6px 18px rgba(119,50,217,0.35);
+}
+body.dark .product-card .btn-add { background: var(--p-purple-vibrant); }
+body.dark .product-card .btn-add:hover { background: var(--p-purple-deep); }
+
+/* ---------- BRAND CARDS (marcas page) ---------- */
+.brand-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 1.8rem 1.4rem 1.5rem;
+  text-align: center;
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+  transition: transform 0.35s cubic-bezier(0.23,1,0.32,1),
+              box-shadow 0.35s ease,
+              border-color 0.3s ease,
+              background 0.45s ease;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  display: block;
+}
+.brand-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(247,198,249,0.22) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.brand-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--p-purple-deep);
+}
+.brand-card:hover::before { opacity: 1; }
+.brand-card img {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 1.1rem;
+  border: 3px solid var(--p-lavender-light);
+  background: var(--p-beige-soft);
+  box-shadow: 0 4px 16px rgba(104,42,191,0.15);
+  transition: border-color 0.3s, transform 0.35s;
+  display: block;
+}
+.brand-card:hover img { transform: scale(1.05); border-color: var(--p-purple-deep); }
+body.dark .brand-card img { border-color: rgba(217,183,255,0.40); background: rgba(255,255,255,0.06); }
+body.dark .brand-card:hover img { border-color: var(--p-pink-soft); }
+.brand-card h3 {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text-heading);
+  margin-bottom: 0.55rem;
+  letter-spacing: 0.2px;
+}
+.brand-card p {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0 0 1rem;
+}
+.brand-card .brand-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--p-purple-deep);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+body.dark .brand-card .brand-explore { color: var(--p-pink-soft); }
+.brand-card:hover .brand-explore i { transform: translateX(3px); }
+.brand-card .brand-explore i { transition: transform 0.25s; }
+
+/* ---------- PRODUCT CARD — MOBILE (2 por fila en <576px) ----------
+ * Las columnas (col-6 col-sm-6 col-md-4 col-lg-3) las asigna
+ * renderProductCard en main.js. Aquí compactamos tipografías,
+ * paddings y tamaño de imagen para que 2 cards quepan cómodamente
+ * en pantallas pequeñas sin sacrificar legibilidad. */
+@media (max-width: 576px) {
+  .product-card .card-img-wrap {
+    height: 140px;
+  }
+  .product-card .card-img-wrap img {
+    padding: 10px;
+  }
+
+  .product-card .card-body {
+    padding: 0.75rem;
+  }
+  .product-card .card-brand {
+    font-size: 0.62rem;
+    letter-spacing: 0.9px;
+  }
+  .product-card .card-title {
+    font-size: 0.8rem;
+    margin: 0.3rem 0 0.4rem;
+    -webkit-line-clamp: 2;
+    line-height: 1.25;
+  }
+  .product-card .card-price {
+    font-size: 0.9rem;
+  }
+  .product-card .card-price .old-price {
+    font-size: 0.72rem;
+    margin-right: 4px;
+  }
+
+  .product-card .btn-add {
+    font-size: 0.75rem;
+    padding: 7px 0;
+    margin-top: 0.55rem;
+    gap: 5px;
+    border-radius: 10px;
+  }
+  .product-card .btn-add i {
+    font-size: 0.85rem;
+  }
+
+  .badge-bestseller {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    top: 8px;
+    left: 8px;
+  }
+  .badge-cat {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    top: 8px;
+    left: 8px;
+  }
+  .badge-sale {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    top: 8px;
+    right: 8px;
+  }
+  /* Al existir el badge-bestseller, la cat badge se empuja debajo */
+  .product-card .card-img-wrap .badge-bestseller ~ .badge-cat {
+    top: 34px;
+  }
+
+  .product-card .btn-fav {
+    width: 32px;
+    height: 32px;
+    bottom: 6px;
+    right: 6px;
+    font-size: 0.85rem;
+  }
+}
+
+/* ---------- FAVORITO EN DETALLE DE PRODUCTO / MODAL ----------
+ * Botón grande y centrado que acompaña al CTA de WhatsApp tanto en
+ * producto.html (.producto-info) como en el modal quick-view.
+ * Reutiliza la animación `favPop` declarada arriba. */
+.producto-fav-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.9rem;
+}
+.btn-fav-detail {
+  background: transparent;
+  border: 1.5px solid var(--p-lavender-light);
+  color: var(--p-purple-deep);
+  padding: 0.65rem 1.6rem;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+}
+.btn-fav-detail i {
+  font-size: 1.15rem;
+  color: inherit;
+  transition: transform 0.22s ease;
+}
+.btn-fav-detail:hover {
+  background: rgba(217,183,255,0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(104,42,191,0.18);
+}
+.btn-fav-detail.active {
+  color: #e53e6b;
+  border-color: #e53e6b;
+  background: rgba(229,62,107,0.08);
+}
+.btn-fav-detail.active i {
+  color: #e53e6b;
+  animation: favPop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+body.dark .btn-fav-detail {
+  color: var(--p-lavender-light);
+  border-color: rgba(217,183,255,0.45);
+}
+body.dark .btn-fav-detail:hover {
+  background: rgba(217,183,255,0.14);
+}
+body.dark .btn-fav-detail.active {
+  color: var(--p-pink-soft);
+  border-color: var(--p-pink-soft);
+  background: rgba(247,198,249,0.12);
+}
+body.dark .btn-fav-detail.active i { color: var(--p-pink-soft); }

@@ -1,0 +1,490 @@
+/* ===== LÜNABI — Auth (login + registro) =====
+ * Modal con tabs estilo pill, formularios elegantes y menú de usuario
+ * con avatar desplegable desde el navbar. Todos los colores vienen de
+ * los tokens LÜNABI; no hay #hex fuera de paleta ni assets externos.
+ */
+
+/* ============================================================
+ * Botón de usuario en el navbar
+ * ============================================================ */
+.navbar-glass .nav-user-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.navbar-glass .nav-user {
+  background: var(--nav-link-hover-bg);
+  border: 1px solid var(--nav-glass-border);
+  color: var(--p-purple-deep);
+  width: 38px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+  transition: background 0.22s, color 0.22s, border-color 0.22s, transform 0.22s;
+  position: relative;
+  cursor: pointer;
+}
+.navbar-glass .nav-user:hover {
+  background: var(--p-lavender-light);
+  transform: translateY(-1px);
+}
+body.dark .navbar-glass .nav-user { color: var(--p-pink-soft); }
+body.dark .navbar-glass .nav-user:hover { background: rgba(247,198,249,0.18); }
+
+/* Estado "logueada": pastilla con gradiente + avatar con inicial */
+.navbar-glass .nav-user.is-logged {
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-lila-mid));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 14px rgba(104,42,191,0.35);
+}
+body.dark .navbar-glass .nav-user.is-logged {
+  background: linear-gradient(135deg, var(--p-purple-vibrant), var(--p-lila-mid));
+  box-shadow: 0 3px 14px rgba(119,50,217,0.45);
+}
+.navbar-glass .nav-user .user-avatar {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1rem;
+  line-height: 1;
+  color: #fff;
+}
+
+/* ============================================================
+ * Menú desplegable bajo el avatar (custom, no Bootstrap)
+ * ============================================================ */
+.user-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1060;
+  min-width: 260px;
+  padding: 1rem;
+  background: rgba(242,242,242,0.98);
+  border: 1px solid var(--p-lavender-light);
+  border-radius: 18px;
+  box-shadow: 0 14px 44px rgba(104,42,191,0.22);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+body.dark .user-menu {
+  background: rgba(18,8,30,0.97);
+  border-color: rgba(217,183,255,0.3);
+  box-shadow: 0 14px 44px rgba(0,0,0,0.55);
+}
+.user-menu.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.user-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.3rem 0.2rem 0.7rem;
+}
+.user-avatar-large {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-lila-mid));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(104,42,191,0.3);
+}
+body.dark .user-avatar-large {
+  background: linear-gradient(135deg, var(--p-purple-vibrant), var(--p-lila-mid));
+}
+.user-menu-name {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--p-purple-deep);
+  line-height: 1.2;
+}
+body.dark .user-menu-name { color: var(--p-pink-soft); }
+.user-menu-email {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  word-break: break-all;
+}
+
+.user-menu hr {
+  margin: 0.4rem 0 0.5rem;
+  border: none;
+  border-top: 1px solid var(--p-lavender-light);
+  opacity: 0.55;
+}
+body.dark .user-menu hr { border-top-color: rgba(217,183,255,0.25); }
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--p-purple-deep);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
+  text-align: left;
+}
+.user-menu-item:hover {
+  background: var(--p-gray-warm);
+  color: var(--p-purple-vibrant);
+  transform: translateX(2px);
+}
+body.dark .user-menu-item { color: var(--p-lavender-light); }
+body.dark .user-menu-item:hover {
+  background: rgba(247,198,249,0.12);
+  color: var(--p-pink-soft);
+}
+.user-menu-item i { font-size: 1.05rem; }
+
+/* ============================================================
+ * Páginas dedicadas (login.html / registro.html)
+ * Mismo diseño que el modal, pero en una card centrada dentro de
+ * la página completa para que el backend pueda renderizarlas/servirlas
+ * como rutas reales (/login, /registro).
+ * ============================================================ */
+.auth-page {
+  min-height: 100vh;
+  padding-top: calc(var(--nav-h-top) + var(--nav-h-bot) + 2rem);
+  padding-bottom: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.auth-page .container {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-card {
+  max-width: 460px;
+  width: 100%;
+  background: rgba(242,242,242,0.98);
+  border: 1px solid var(--p-lavender-light);
+  border-radius: 22px;
+  box-shadow: 0 20px 60px rgba(104,42,191,0.22);
+  padding: 2rem 1.9rem 2.1rem;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  position: relative;
+  overflow: hidden;
+}
+body.dark .auth-card {
+  background: rgba(18,8,30,0.97);
+  border-color: rgba(217,183,255,0.25);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(104,42,191,0.07), rgba(246,198,249,0.10) 60%, transparent);
+  pointer-events: none;
+}
+body.dark .auth-card::before {
+  background: linear-gradient(135deg, rgba(247,198,249,0.08), rgba(159,132,230,0.10) 60%, transparent);
+}
+
+.auth-card-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.auth-card-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  transition: transform 0.25s ease;
+}
+.auth-card-logo:hover { transform: translateY(-1px); }
+.auth-card-logo img {
+  height: 52px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 2px 10px rgba(104,42,191,0.20));
+  transition: filter 0.45s ease;
+}
+body.dark .auth-card-logo img {
+  filter: brightness(0) invert(1) drop-shadow(0 0 14px rgba(247,198,249,0.35));
+}
+.auth-card-name {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1.9rem;
+  color: var(--p-purple-deep);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+body.dark .auth-card-name { color: var(--p-pink-soft); }
+
+/* En la página el h3 se promociona a h1 — mismos estilos. */
+.auth-card .auth-intro {
+  position: relative;
+  text-align: center;
+  margin-bottom: 1.6rem;
+}
+.auth-card .auth-intro h1 {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1.65rem;
+  color: var(--p-purple-deep);
+  margin: 0 0 0.3rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+body.dark .auth-card .auth-intro h1 { color: var(--p-pink-soft); }
+.auth-card .auth-intro p {
+  color: var(--text-subhead);
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+/* El .auth-form dentro de la card siempre visible (el modal usa .active) */
+.auth-card .auth-form {
+  position: relative;
+  display: block;
+}
+
+@media (max-width: 575px) {
+  .auth-page {
+    padding-top: calc(var(--nav-h-top) + var(--nav-h-bot) + 1.2rem);
+    padding-bottom: 2rem;
+  }
+  .auth-card { padding: 1.5rem 1.3rem 1.7rem; }
+  .auth-card-logo img { height: 44px; }
+  .auth-card-name { font-size: 1.6rem; }
+  .auth-card .auth-intro h1 { font-size: 1.4rem; }
+}
+
+/* ============================================================
+ * Modal de autenticación
+ * ============================================================ */
+.auth-modal .modal-dialog {
+  max-width: 440px;
+}
+.auth-modal .modal-content {
+  background: rgba(242,242,242,0.98);
+  border: 1px solid var(--p-lavender-light);
+  border-radius: 22px;
+  box-shadow: 0 20px 60px rgba(104,42,191,0.22);
+  color: var(--text-main);
+  overflow: hidden;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+body.dark .auth-modal .modal-content {
+  background: rgba(18,8,30,0.97);
+  border-color: rgba(217,183,255,0.25);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.auth-modal .modal-header {
+  background: linear-gradient(135deg, rgba(104,42,191,0.09), rgba(246,198,249,0.14));
+  padding: 1.2rem 1.4rem 1rem;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+body.dark .auth-modal .modal-header {
+  background: linear-gradient(135deg, rgba(247,198,249,0.08), rgba(159,132,230,0.12));
+}
+.auth-modal .modal-header .btn-close {
+  margin: 0;
+  opacity: 0.6;
+}
+
+/* Tabs pill (login / signup) */
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--p-beige-soft);
+  padding: 4px;
+  border-radius: 12px;
+  flex: 1;
+}
+body.dark .auth-tabs { background: rgba(255,255,255,0.06); }
+.auth-tab {
+  flex: 1;
+  padding: 0.55rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, box-shadow 0.25s;
+  white-space: nowrap;
+}
+.auth-tab:hover { color: var(--p-purple-deep); }
+body.dark .auth-tab:hover { color: var(--p-pink-soft); }
+.auth-tab.active {
+  background: #fff;
+  color: var(--p-purple-deep);
+  box-shadow: 0 2px 10px rgba(104,42,191,0.14);
+}
+body.dark .auth-tab.active {
+  background: rgba(247,198,249,0.14);
+  color: var(--p-pink-soft);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+
+/* Body + formularios */
+.auth-modal .modal-body { padding: 1.5rem 1.75rem 1.75rem; }
+
+.auth-form {
+  display: none;
+  animation: auth-fade-in 0.28s ease;
+}
+.auth-form.active { display: block; }
+@keyframes auth-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-intro {
+  text-align: center;
+  margin-bottom: 1.3rem;
+}
+.auth-intro h3 {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1.45rem;
+  color: var(--p-purple-deep);
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+body.dark .auth-intro h3 { color: var(--p-pink-soft); }
+.auth-intro p {
+  color: var(--text-subhead);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.auth-field {
+  display: block;
+  margin-bottom: 0.9rem;
+}
+.auth-field span {
+  display: block;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-heading);
+  margin-bottom: 0.4rem;
+}
+.auth-field input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 11px 14px;
+  color: var(--input-text);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.auth-field input::placeholder { color: var(--text-muted); }
+.auth-field input:focus {
+  border-color: var(--p-purple-deep);
+  box-shadow: 0 0 0 3px rgba(159,132,230,0.22);
+}
+body.dark .auth-field input:focus {
+  border-color: var(--p-pink-soft);
+  box-shadow: 0 0 0 3px rgba(247,198,249,0.20);
+}
+
+.auth-error {
+  color: #d65252;
+  font-size: 0.82rem;
+  font-weight: 500;
+  min-height: 1.2em;
+  margin: 0.1rem 0 0.7rem;
+  text-align: center;
+}
+
+.btn-auth {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-purple-vibrant));
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 700;
+  font-size: 0.98rem;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 20px rgba(104,42,191,0.32);
+  transition: background 0.25s, transform 0.25s, box-shadow 0.25s;
+  cursor: pointer;
+}
+.btn-auth:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(119,50,217,0.42);
+}
+body.dark .btn-auth {
+  background: linear-gradient(135deg, var(--p-purple-vibrant), var(--p-lila-mid));
+}
+.btn-auth i { font-size: 1rem; }
+
+.auth-footer {
+  text-align: center;
+  margin: 1.1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.auth-footer a {
+  color: var(--p-purple-vibrant);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.auth-footer a:hover { color: var(--p-purple-deep); }
+body.dark .auth-footer a { color: var(--p-pink-soft); }
+body.dark .auth-footer a:hover { color: var(--p-lavender-light); }
+
+/* Responsive */
+@media (max-width: 575px) {
+  .auth-modal .modal-body { padding: 1.2rem 1.3rem 1.4rem; }
+  .auth-modal .modal-header { padding: 1rem 1.1rem 0.85rem; gap: 0.6rem; }
+  .auth-intro h3 { font-size: 1.25rem; }
+  .user-menu {
+    right: -8px;
+    min-width: 240px;
+    padding: 0.85rem;
+  }
+}

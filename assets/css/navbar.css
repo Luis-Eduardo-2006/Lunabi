@@ -1,0 +1,734 @@
+/* ===== LÜNABI — Navbar (Bootstrap navbar + glassmorphism estilo.txt) =====
+ *
+ * Estructura:
+ *   - Bootstrap .navbar.navbar-expand-lg.fixed-top con clase propia .navbar-glass
+ *   - backdrop-filter: blur(20px) saturate(180%) sobre fondo translúcido
+ *   - .navbar-glass.scrolled oscurece ligeramente para legibilidad
+ *   - Nav-links con hover pill + underline centrado en .active
+ *   - Dropdowns: hover en desktop (CSS), estáticos y en cascada en mobile (collapse)
+ *   - Colores: tokens LÜNABI (--p-purple-deep, --p-lila-mid, etc.), sin alterar la paleta
+ */
+
+/* ---------- BASE NAVBAR ---------- */
+.navbar-glass {
+  background: var(--nav-glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--nav-glass-border);
+  box-shadow: var(--nav-glass-shadow);
+  transition: background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.navbar-glass.scrolled {
+  background: var(--nav-glass-bg-scroll) !important;
+  box-shadow: 0 12px 48px rgba(104,42,191,0.18);
+}
+body.dark .navbar-glass.scrolled { box-shadow: 0 12px 48px rgba(0,0,0,0.55); }
+
+/* Bootstrap navbar overrides with LÜNABI colors */
+.navbar-glass {
+  --bs-navbar-color: var(--p-purple-deep);
+  --bs-navbar-hover-color: var(--p-purple-vibrant);
+  --bs-navbar-active-color: var(--p-purple-vibrant);
+  --bs-navbar-toggler-border-color: var(--nav-glass-border);
+  --bs-navbar-toggler-icon-bg: var(--nav-toggler-icon);
+  --bs-navbar-toggler-focus-width: 0.2rem;
+}
+body.dark .navbar-glass {
+  --bs-navbar-color: var(--p-lavender-light);
+  --bs-navbar-hover-color: var(--p-pink-soft);
+  --bs-navbar-active-color: var(--p-pink-soft);
+}
+
+/* ---------- BRAND (nombre "Lünabi" + logo image) ---------- */
+.navbar-glass .navbar-brand {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  margin-right: 1.5rem;
+  line-height: 1;
+  text-decoration: none;
+}
+.navbar-glass .navbar-brand .marca-nombre {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-size: 1.6rem;
+  color: #682ABF;
+  letter-spacing: -0.02em;
+  margin-right: 8px;
+  line-height: 1;
+  display: inline-block;
+  transition: color 0.45s ease, transform 0.25s ease;
+}
+body.dark .navbar-glass .navbar-brand .marca-nombre {
+  color: #F6C6F9;
+}
+.navbar-glass .navbar-brand:hover .marca-nombre {
+  transform: translateY(-1px);
+}
+.navbar-glass .navbar-brand img {
+  height: 42px;
+  width: auto;
+  display: block;
+  transition: filter 0.45s ease, transform 0.25s ease;
+  filter: drop-shadow(0 2px 10px rgba(104,42,191,0.18));
+}
+.navbar-glass .navbar-brand:hover img { transform: scale(1.04); }
+body.dark .navbar-glass .navbar-brand img {
+  filter: brightness(0) invert(1) drop-shadow(0 0 14px rgba(247,198,249,0.35));
+}
+
+/* ---------- NAV LINKS (pill + underline) ---------- */
+.navbar-glass .navbar-nav {
+  --bs-nav-link-font-size: 0.9rem;
+  --bs-nav-link-font-weight: 500;
+  --bs-nav-link-color: var(--p-purple-deep);
+  --bs-nav-link-hover-color: var(--p-purple-vibrant);
+  gap: 0.15rem;
+}
+body.dark .navbar-glass .navbar-nav {
+  --bs-nav-link-color: var(--p-lavender-light);
+  --bs-nav-link-hover-color: var(--p-pink-soft);
+}
+.navbar-glass .nav-link {
+  font-family: var(--font-body);
+  letter-spacing: 0.01em;
+  padding: 0.48rem 0.95rem;
+  border-radius: 10px;
+  transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease;
+  position: relative;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.navbar-glass .nav-link:hover,
+.navbar-glass .nav-link:focus-visible,
+.navbar-glass .nav-link.active {
+  background: var(--nav-link-hover-bg);
+}
+.navbar-glass .nav-link.active::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 2px;
+  background: var(--p-purple-deep);
+  border-radius: 1px;
+}
+body.dark .navbar-glass .nav-link.active::after { background: var(--p-pink-soft); }
+
+/* Dropdown-toggle caret — uses Bootstrap's default CSS triangle + rotate on hover */
+.navbar-glass .nav-link.dropdown-toggle::after {
+  margin-left: 5px;
+  border-top-width: 4px;
+  vertical-align: middle;
+  transition: transform 0.2s ease;
+}
+.navbar-glass .nav-item.dropdown:hover .nav-link.dropdown-toggle::after {
+  transform: rotate(180deg);
+}
+
+/* Sale badge inside its nav-link */
+.navbar-glass .sale-badge {
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: var(--p-purple-vibrant);
+  color: #fff;
+  padding: 2px 9px;
+  border-radius: 8px;
+  margin-left: 4px;
+  letter-spacing: 0.6px;
+  box-shadow: 0 2px 12px rgba(119,50,217,0.38);
+  animation: salePulse 1.8s ease-in-out infinite;
+}
+@keyframes salePulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.70; }
+}
+
+/* ---------- MEGA-MENU DROPDOWNS (Skincare / Maquillaje / Marcas) ----------
+ * Todos los dropdowns son mega-menús horizontales en grid 3-col.
+ * Valores exactos per brief:
+ *   min-width 520px · padding 1.5rem · border 1px #D9B7FF · radius 16px
+ *   shadow 0 12px 40px rgba(104,42,191,0.15) · grid 3cols · gap 0.25rem
+ */
+.mega-dropdown-menu.dropdown-menu {
+  min-width: 520px;
+  padding: 1.5rem;
+  margin-top: 0.35rem;
+  background: rgba(242,242,242,0.98);
+  border: 1px solid #D9B7FF;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(104,42,191,0.15);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  font-family: 'Epilogue', sans-serif;
+  /* grid params ready — `display: grid` is applied by the :hover rule below,
+     so Bootstrap's default `display: none` keeps the menu hidden at rest. */
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: row;
+  gap: 0.25rem;
+  list-style: none;
+}
+body.dark .mega-dropdown-menu.dropdown-menu {
+  background: rgba(18,8,30,0.97);
+  border-color: #D9B7FF;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 20px rgba(217,183,255,0.10);
+}
+.mega-dropdown-menu > li {
+  list-style: none;
+  margin: 0;
+}
+
+/* Variante compacta para categorías con pocos items (p.ej. Corporal 2×2). */
+.mega-dropdown-menu.mega-2col.dropdown-menu {
+  grid-template-columns: repeat(2, 1fr);
+  min-width: 360px;
+  padding: 1.1rem;
+}
+
+/* Items — aplica a `.dropdown-item` (Maquillaje / Marcas, flat) y a
+ * `.mega-header` (Skincare, cabecera de cada item con flyout). */
+.mega-dropdown-menu .dropdown-item,
+.mega-dropdown-menu .mega-header {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-family: 'Epilogue', sans-serif;
+  font-weight: 400;
+  font-size: 0.88rem;
+  color: #682ABF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+  display: block;
+}
+.mega-dropdown-menu .dropdown-item:hover,
+.mega-dropdown-menu .dropdown-item:focus,
+.mega-dropdown-menu .mega-header:hover,
+.mega-dropdown-menu .mega-header:focus {
+  background: #EAE7F2;
+  color: #7732D9;
+}
+body.dark .mega-dropdown-menu .dropdown-item,
+body.dark .mega-dropdown-menu .mega-header {
+  color: #D9B7FF;
+}
+body.dark .mega-dropdown-menu .dropdown-item:hover,
+body.dark .mega-dropdown-menu .dropdown-item:focus,
+body.dark .mega-dropdown-menu .mega-header:hover,
+body.dark .mega-dropdown-menu .mega-header:focus {
+  background: rgba(217,183,255,0.15);
+  color: #F6C6F9;
+}
+
+/* ---------- SKINCARE FLYOUT SUBMENU ----------
+ * Skincare usa `<ul class="mega-dropdown-menu mega-has-flyouts">`.
+ * Cada `<li class="mega-item">` es una celda del grid 3-col. Las categorías
+ * con subcategorías llevan un `<div class="mega-sub-panel">` hijo que se
+ * posiciona de forma absoluta a la derecha del item y solo se muestra cuando
+ * el ratón está sobre el `<li>`. Las que no tienen subs solo resaltan.
+ */
+.mega-dropdown-menu.mega-has-flyouts .mega-item {
+  position: relative;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Mega-header: título de categoría (Limpieza, Exfoliante, …) */
+.mega-dropdown-menu .mega-header {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.mega-dropdown-menu .mega-header.has-subs::after {
+  content: ' ›';
+  margin-left: 0.4rem;
+  color: var(--p-lila-mid);
+  font-weight: 500;
+  opacity: 0.8;
+}
+body.dark .mega-dropdown-menu .mega-header.has-subs::after {
+  color: var(--p-pink-soft);
+  opacity: 0.75;
+}
+
+/* Mantener el header resaltado mientras el flyout está visible — cuando el
+ * mouse se mueve del `<a>` al `<div class="mega-sub-panel">`, el `<a>:hover`
+ * deja de aplicarse, así que lo compensamos desde el `<li>:hover`. */
+.mega-dropdown-menu .mega-item:hover > .mega-header {
+  background: #EAE7F2;
+  color: #7732D9;
+}
+body.dark .mega-dropdown-menu .mega-item:hover > .mega-header {
+  background: rgba(217,183,255,0.15);
+  color: #F6C6F9;
+}
+
+/* Panel lateral con las subcategorías */
+.mega-dropdown-menu .mega-sub-panel {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: -0.5rem;
+  min-width: 210px;
+  padding: 1rem 0.85rem;
+  background: rgba(242,242,242,0.98);
+  border: 1px solid #D9B7FF;
+  border-left: 2px solid #9F84E6;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(104,42,191,0.18);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  display: none;
+  flex-direction: column;
+  gap: 0.15rem;
+  z-index: 1100;
+}
+body.dark .mega-dropdown-menu .mega-sub-panel {
+  background: rgba(18,8,30,0.97);
+  border-color: #D9B7FF;
+  border-left-color: #9F84E6;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 20px rgba(217,183,255,0.10);
+}
+
+/* Items del flyout */
+.mega-dropdown-menu .mega-sub-link {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-family: 'Epilogue', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #682ABF;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: block;
+}
+.mega-dropdown-menu .mega-sub-link:hover,
+.mega-dropdown-menu .mega-sub-link:focus {
+  background: #EAE7F2;
+  color: #7732D9;
+}
+body.dark .mega-dropdown-menu .mega-sub-link {
+  color: #D9B7FF;
+}
+body.dark .mega-dropdown-menu .mega-sub-link:hover,
+body.dark .mega-dropdown-menu .mega-sub-link:focus {
+  background: rgba(217,183,255,0.15);
+  color: #F6C6F9;
+}
+
+/* Mostrar el panel cuando el ratón está sobre su `<li class="mega-item">` */
+@media (min-width: 992px) {
+  .mega-dropdown-menu .mega-item:hover > .mega-sub-panel {
+    display: flex;
+    animation: mega-flyout-in 0.2s ease;
+  }
+  @keyframes mega-flyout-in {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Para los items de la columna derecha (nth-child(3n)) el panel se abre
+   * hacia la izquierda para no salir del viewport. Solo afecta al item
+   * "Contorno de Ojos" entre los que tienen subs; el resto de col 3 no tiene. */
+  .mega-dropdown-menu.mega-has-flyouts > .mega-item:nth-child(3n) > .mega-sub-panel {
+    left: auto;
+    right: calc(100% + 6px);
+  }
+  .mega-dropdown-menu.mega-has-flyouts > .mega-item:nth-child(3n):hover > .mega-sub-panel {
+    animation: mega-flyout-in-left 0.2s ease;
+  }
+  @keyframes mega-flyout-in-left {
+    from { opacity: 0; transform: translateX(8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+}
+
+/* Hover-to-open on desktop con animación suave.
+ * Se usa `display: grid` (no block) para que el grid-template-columns del
+ * mega-menu surta efecto y los items fluyan horizontalmente (row-first).
+ */
+@media (min-width: 992px) {
+  .navbar-glass .nav-item.dropdown:hover > .mega-dropdown-menu {
+    display: grid;
+    animation: lu-drop-in 0.25s ease;
+  }
+  @keyframes lu-drop-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ---------- UTILITIES GROUP (search + theme + user + cart) ----------
+ * Viven fuera de `.navbar-collapse` para que siempre estén visibles.
+ * - Desktop (>=992px): al final de la barra (order 3) empujados a la derecha.
+ * - Tablet/móvil (<992px): ocupan su propia fila (flex-basis 100%) bajo la
+ *   marca+toggler, siempre visibles sin depender del hamburguesa.
+ */
+.navbar-utils {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: 0.25rem;
+}
+@media (min-width: 992px) {
+  .navbar-glass .navbar-utils {
+    order: 3;
+    margin-left: auto;
+  }
+}
+
+/* Search */
+.navbar-glass .nav-search {
+  position: relative;
+  width: 210px;
+  max-width: 100%;
+}
+.navbar-glass .nav-search input {
+  width: 100%;
+  height: 36px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 0 12px 0 34px;
+  color: var(--input-text);
+  font-family: var(--font-body);
+  font-size: 0.83rem;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.45s, color 0.45s;
+}
+.navbar-glass .nav-search input::placeholder { color: var(--text-muted); }
+.navbar-glass .nav-search input:focus {
+  border-color: var(--p-purple-deep);
+  box-shadow: 0 0 0 3px rgba(159,132,230,0.22);
+}
+body.dark .navbar-glass .nav-search input:focus {
+  border-color: var(--p-pink-soft);
+  box-shadow: 0 0 0 3px rgba(247,198,249,0.20);
+}
+.navbar-glass .nav-search .search-icon {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--p-lila-mid);
+  font-size: 0.88rem;
+  pointer-events: none;
+}
+.navbar-glass .search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0; right: 0;
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  display: none;
+  z-index: 1100;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 16px;
+  box-shadow: 0 14px 44px rgba(104,42,191,0.18);
+}
+body.dark .navbar-glass .search-results { box-shadow: 0 14px 44px rgba(0,0,0,0.55); }
+.navbar-glass .search-results.show { display: block; }
+.navbar-glass .search-results .sr-group {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--p-lila-mid);
+  padding: 6px 8px 2px;
+}
+.navbar-glass .search-results .sr-item {
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--dropdown-item);
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.navbar-glass .search-results .sr-item:hover {
+  background: var(--dropdown-hover-bg);
+  color: var(--dropdown-hover-fg);
+}
+.navbar-glass .search-results .sr-item img {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--bg-alt);
+}
+.navbar-glass .search-results mark {
+  background: var(--p-lavender-light);
+  color: var(--p-purple-deep);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+/* Theme toggle */
+.navbar-glass .nav-theme {
+  background: var(--nav-link-hover-bg);
+  border: 1px solid var(--nav-glass-border);
+  color: var(--p-purple-deep);
+  width: 38px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  transition: background 0.22s, color 0.22s, border-color 0.22s, transform 0.22s;
+}
+.navbar-glass .nav-theme:hover {
+  background: var(--p-lavender-light);
+  transform: translateY(-1px);
+}
+body.dark .navbar-glass .nav-theme { color: var(--p-pink-soft); }
+body.dark .navbar-glass .nav-theme:hover {
+  background: rgba(247,198,249,0.18);
+}
+
+/* Cart button */
+.navbar-glass .nav-cart {
+  position: relative;
+  background: var(--nav-link-hover-bg);
+  border: 1px solid var(--nav-glass-border);
+  color: var(--p-purple-deep);
+  width: 38px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+  transition: background 0.22s, color 0.22s, border-color 0.22s, transform 0.22s;
+}
+.navbar-glass .nav-cart:hover {
+  background: var(--p-lavender-light);
+  transform: translateY(-1px);
+}
+body.dark .navbar-glass .nav-cart { color: var(--p-pink-soft); }
+body.dark .navbar-glass .nav-cart:hover { background: rgba(247,198,249,0.18); }
+.navbar-glass .nav-cart .badge {
+  position: absolute;
+  top: -6px; right: -6px;
+  background: var(--p-purple-deep);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  box-shadow: 0 2px 10px rgba(104,42,191,0.45);
+  border: 2px solid var(--bg-main);
+}
+body.dark .navbar-glass .nav-cart .badge {
+  background: var(--p-purple-vibrant);
+  border-color: #1a0f2e;
+}
+.navbar-glass .nav-cart .badge.pulse { animation: badgePulse 0.45s ease; }
+@keyframes badgePulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- NAVBAR TOGGLER (mobile hamburger) ---------- */
+.navbar-glass .navbar-toggler {
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  transition: background 0.22s;
+}
+.navbar-glass .navbar-toggler:focus { box-shadow: 0 0 0 3px rgba(159,132,230,0.22); }
+.navbar-glass .navbar-toggler:hover { background: var(--nav-link-hover-bg); }
+
+/* ---------- MOBILE BEHAVIOUR (progressive disclosure) ----------
+ * En <992px todo el menú arranca colapsado. initMobileNav() en main.js
+ * añade/quita la clase `.open` en `.nav-item.dropdown` (level 1) y en
+ * `.mega-item` con `has-subs` (level 2) en respuesta al toque.
+ *
+ * Level 0 (siempre visible): los .nav-link de 1er nivel.
+ * Level 1 (.mega-dropdown-menu): colapsado max-height 0; abre con .open.
+ * Level 2 (.mega-sub-panel):    colapsado max-height 0; abre con .open.
+ */
+@media (max-width: 991.98px) {
+  .navbar-glass .navbar-brand .marca-nombre { font-size: 1.35rem; }
+  .navbar-glass .navbar-brand img { height: 36px; }
+
+  /* Fondo opaco del menú expandido */
+  .navbar-glass .navbar-collapse {
+    margin-top: 0.8rem;
+    padding: 0.8rem 1rem;
+    border-top: 1px solid var(--nav-glass-border);
+    background: rgba(242,242,242,0.98);
+    border-radius: 0 0 16px 16px;
+  }
+  body.dark .navbar-glass .navbar-collapse {
+    background: rgba(18,8,30,0.98);
+  }
+
+  .navbar-glass .navbar-nav {
+    gap: 0.1rem;
+    margin-bottom: 0.9rem !important;
+  }
+
+  /* ---------- LEVEL 0: top-level nav links ---------- */
+  .navbar-glass .nav-link {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    color: #682ABF;
+    border-radius: 10px;
+  }
+  body.dark .navbar-glass .nav-link { color: #D9B7FF; }
+  .navbar-glass .nav-link.active::after { display: none; }
+
+  /* Caret del dropdown-toggle: rota 180° cuando .open */
+  .navbar-glass .nav-link.dropdown-toggle::after {
+    margin-left: auto;
+    transition: transform 0.25s ease;
+  }
+  .navbar-glass .nav-item.dropdown.open > .nav-link.dropdown-toggle::after {
+    transform: rotate(180deg);
+  }
+
+  /* ---------- LEVEL 1: .mega-dropdown-menu (Skincare categorías, etc.) ---------- */
+  .navbar-glass .mega-dropdown-menu.dropdown-menu {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.05rem;
+    float: none;
+    width: 100%;
+    min-width: auto;
+    margin: 0 0 0 0.75rem;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    /* colapsado por defecto */
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  .navbar-glass .nav-item.dropdown.open > .mega-dropdown-menu.dropdown-menu {
+    max-height: 2000px;
+    padding-top: 0.35rem;
+    padding-bottom: 0.5rem;
+  }
+
+  /* Items de nivel 1: Limpieza, Exfoliante, Rostro, Cuerpo, marcas… */
+  .navbar-glass .mega-dropdown-menu .dropdown-item,
+  .navbar-glass .mega-dropdown-menu .mega-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1.5rem;
+    font-size: 0.9rem;
+    color: #7732D9;
+    border-radius: 10px;
+  }
+  body.dark .navbar-glass .mega-dropdown-menu .dropdown-item,
+  body.dark .navbar-glass .mega-dropdown-menu .mega-header {
+    color: #F6C6F9;
+  }
+
+  /* Flecha › del mega-header con subs: rota 90° cuando .open */
+  .navbar-glass .mega-dropdown-menu .mega-header.has-subs::after {
+    display: inline-block;
+    margin-left: auto;
+    transition: transform 0.25s ease;
+  }
+  .navbar-glass .mega-dropdown-menu .mega-item.open > .mega-header.has-subs::after {
+    transform: rotate(90deg);
+  }
+
+  /* ---------- LEVEL 2: .mega-sub-panel (subs como Aceite, Foam…) ---------- */
+  .navbar-glass .mega-dropdown-menu .mega-item { position: static; }
+  .navbar-glass .mega-dropdown-menu .mega-sub-panel {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    min-width: auto;
+    width: auto;
+    margin: 0 0 0.25rem 2rem;
+    background: transparent;
+    border: none;
+    border-left: 2px solid #D9B7FF;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    z-index: auto;
+    gap: 0;
+
+    /* colapsado por defecto */
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    animation: none;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  body.dark .navbar-glass .mega-dropdown-menu .mega-sub-panel {
+    border-left-color: rgba(217,183,255,0.45);
+  }
+  .navbar-glass .mega-dropdown-menu .mega-item.open > .mega-sub-panel {
+    max-height: 700px;
+    padding: 0.25rem 0;
+  }
+
+  /* Items de nivel 2: Aceite, Foam, Cushion, Mate, Gloss… */
+  .navbar-glass .mega-dropdown-menu .mega-sub-link {
+    padding: 0.5rem 2.5rem;
+    font-size: 0.85rem;
+    color: #9F84E6;
+    border-radius: 8px;
+  }
+  body.dark .navbar-glass .mega-dropdown-menu .mega-sub-link {
+    color: #D9B7FF;
+  }
+
+  /* Utilities row: siempre visible en una fila propia entre marca+toggler
+   * y el collapse (que contiene los nav items). flex-basis:100% fuerza el
+   * wrap dentro del navbar (que ya usa flex-wrap:wrap por Bootstrap). */
+  .navbar-glass .navbar-utils {
+    flex-basis: 100%;
+    width: 100%;
+    margin: 0.55rem 0 0;
+    gap: 0.5rem;
+  }
+  .navbar-glass .nav-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+  .navbar-glass .nav-search input { font-size: 0.88rem; }
+  .navbar-glass .nav-theme,
+  .navbar-glass .nav-user,
+  .navbar-glass .nav-cart {
+    flex-shrink: 0;
+  }
+}
