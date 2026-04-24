@@ -366,20 +366,70 @@ body.dark .hero-carousel .carousel-control-next i { color: var(--p-pink-soft); }
   position: relative;
   isolation: isolate;
 }
-/* HALO — aro conic-gradient giratorio, como el botón del skintest */
-.hero-cta.fx-halo::before {
+/* HALO — anillo conic-gradient giratorio.
+ * Rotamos el ÁNGULO del gradient (no el pseudo-element) usando @property,
+ * así el halo mantiene la forma pill del botón sin deformarse en cada vuelta.
+ * También añadimos un segundo glow difuso detrás para darle presencia. */
+@property --lu-halo-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.hero-cta.fx-halo { --lu-halo-angle: 0deg; }
+.hero-cta.fx-halo::before,
+.hero-cta.fx-halo::after {
   content: '';
   position: absolute;
-  inset: -4px;
   border-radius: inherit;
-  background: conic-gradient(from 0deg,
-    #F6C6F9 0deg, #D9B7FF 60deg, #9F84E6 120deg,
-    #7732D9 180deg, #682ABF 240deg, #F6C6F9 320deg, #F6C6F9 360deg);
-  filter: blur(6px);
-  z-index: -1;
-  animation: lu-fx-halo-spin 4s linear infinite;
+  pointer-events: none;
 }
-@keyframes lu-fx-halo-spin { to { transform: rotate(360deg); } }
+/* Anillo conic con máscara: el centro del pseudo-element queda transparente
+ * (padding-box), así el halo se ve SOLO en el contorno por fuera del botón
+ * y nunca cubre el área del botón ni su fondo. */
+.hero-cta.fx-halo::before {
+  inset: -9px;
+  padding: 9px;
+  background: conic-gradient(from var(--lu-halo-angle),
+    #F6C6F9 0%, #D9B7FF 18%, #9F84E6 36%, #7732D9 54%,
+    #682ABF 72%, #e06ca1 86%, #F6C6F9 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  filter: blur(7px);
+  z-index: -1;
+  animation: lu-fx-halo-spin 4.5s linear infinite;
+}
+/* Glow radial exterior con máscara — SOLO se ve fuera del perímetro,
+ * como una sombra suave que rodea al botón por detrás. */
+.hero-cta.fx-halo::after {
+  inset: -22px;
+  background: radial-gradient(ellipse closest-side,
+    rgba(247,198,249,0.55) 0%, rgba(119,50,217,0.25) 45%, transparent 80%);
+  -webkit-mask: radial-gradient(ellipse closest-side, transparent 48%, #000 72%);
+          mask: radial-gradient(ellipse closest-side, transparent 48%, #000 72%);
+  filter: blur(9px);
+  z-index: -2;
+  animation: lu-fx-halo-pulse 2.8s ease-in-out infinite;
+}
+@keyframes lu-fx-halo-spin { to { --lu-halo-angle: 360deg; } }
+@keyframes lu-fx-halo-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.97); }
+  50%      { opacity: 0.95; transform: scale(1.03); }
+}
+/* Fallback para navegadores sin soporte @property — rota el pseudo-element
+ * físicamente. Con el halo agrandado y desplazado hacia abajo como sombra,
+ * la deformación al rotar no es visible. */
+@supports not (background: paint(worklet)) {
+  .hero-cta.fx-halo::before {
+    animation: lu-fx-halo-spin-fallback 4.5s linear infinite;
+    background: conic-gradient(from 0deg,
+      #F6C6F9, #D9B7FF, #9F84E6, #7732D9, #682ABF, #e06ca1, #F6C6F9);
+  }
+  @keyframes lu-fx-halo-spin-fallback {
+    to { transform: rotate(360deg); }
+  }
+}
 
 /* GLOW — resplandor pulsante del color configurado */
 .hero-cta.fx-glow { animation: lu-fx-glow-pulse 2.4s ease-in-out infinite; }
@@ -1519,3 +1569,27 @@ body.dark .faq-group-title i {
 .values-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 .value-card { padding: 1rem 0.9rem; text-align: center; }
 .value-card h4 { margin: 0.4rem 0 0; font-size: 0.95rem; }
+
+/* ============================================================
+ * RESPONSIVE EXTRA — pantallas ultra-estrechas (<480px)
+ * ============================================================ */
+@media (max-width: 480px) {
+  .hero-slide { height: 260px; padding: 1rem clamp(3rem, 12vw, 3.8rem); }
+  .hero-content h1 { font-size: clamp(1.4rem, 6vw, 1.9rem); margin-bottom: 0.6rem; }
+  .hero-content p { font-size: 0.82rem; margin-bottom: 1rem; }
+  .hero-cta { padding: 9px 20px; font-size: 0.82rem; }
+  .hero-carousel .carousel-control-prev,
+  .hero-carousel .carousel-control-next { width: 38px; height: 38px; margin: 0 0.3rem; }
+  .hero-carousel .carousel-control-prev i,
+  .hero-carousel .carousel-control-next i { font-size: 1rem; }
+  .section-title { font-size: 1.4rem; }
+  .page-header-title { font-size: 1.6rem; }
+  .values-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+  .value-card { padding: 0.8rem 0.6rem; }
+}
+@media (max-width: 360px) {
+  .hero-slide { height: 240px; }
+  .hero-content h1 { font-size: 1.3rem; }
+  .values-grid { grid-template-columns: 1fr; }
+  .container { padding-left: 0.7rem; padding-right: 0.7rem; }
+}

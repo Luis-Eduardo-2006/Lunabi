@@ -425,3 +425,14 @@ body.dark .lu-chat-footer strong { color: var(--p-pink-soft, #F6C6F9); }
     max-height: calc(100vh - 20px);
   }
 }
+@media (max-width: 420px) {
+  .lu-chat-float { width: 50px; height: 50px; bottom: 150px; right: 18px; font-size: 1.3rem; }
+  .lu-chat-head { padding: 10px 12px; }
+  .lu-chat-head-name { font-size: 0.9rem; }
+  .lu-chat-body { padding: 12px; }
+  .lu-chat-msg { max-width: 92%; font-size: 0.82rem; }
+  .lu-chat-input input { font-size: 0.82rem; padding: 10px 12px; }
+  .lu-chat-input button { width: 36px; height: 36px; }
+  .lu-chat-chips { gap: 5px; }
+  .lu-chat-chip { font-size: 0.72rem; padding: 5px 10px; }
+}

@@ -732,3 +732,17 @@ body.dark .navbar-glass .nav-cart .badge {
     flex-shrink: 0;
   }
 }
+
+/* Phones pequeños (<480px) — mantener navbar usable */
+@media (max-width: 480px) {
+  .navbar-glass .container-fluid { padding: 0 0.6rem; }
+  .navbar-glass .navbar-brand-img { height: 34px; }
+  .navbar-glass .navbar-utils { gap: 0.35rem; }
+  .navbar-glass .nav-search { flex: 1; min-width: 0; max-width: 140px; }
+  .navbar-glass .nav-search input { font-size: 0.78rem; padding: 6px 10px 6px 28px; }
+  .navbar-glass .nav-search i { font-size: 0.9rem; left: 10px; }
+  .navbar-glass .nav-theme,
+  .navbar-glass .nav-user,
+  .navbar-glass .nav-cart { width: 34px; height: 34px; font-size: 0.9rem; }
+  .navbar-glass .nav-cart .cart-count { font-size: 0.65rem; min-width: 16px; height: 16px; }
+}

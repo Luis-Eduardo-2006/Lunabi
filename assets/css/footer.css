@@ -183,3 +183,26 @@
   border-radius: 10px;
   border: 1px solid rgba(217,183,255,0.28);
 }
+
+/* ============================================================
+ * RESPONSIVE
+ * ============================================================ */
+@media (max-width: 767px) {
+  .lu-footer { padding: 2.4rem 0 1.2rem; }
+  .footer-title { font-size: 1.5rem; }
+  .footer-about { font-size: 0.88rem; }
+  .footer-social { gap: 10px; flex-wrap: wrap; }
+  .footer-social a { width: 38px; height: 38px; font-size: 0.95rem; }
+  .footer-values { gap: 0.5rem; }
+  .footer-values span { font-size: 0.72rem; padding: 4px 10px; }
+  .subfooter { flex-direction: column; gap: 0.4rem; text-align: center; padding: 0.8rem 0; }
+}
+@media (max-width: 480px) {
+  .lu-footer { padding: 2rem 0 1rem; }
+  .footer-title { font-size: 1.35rem; }
+  .footer-links a,
+  .footer-contact li { font-size: 0.82rem; }
+  .footer-social a { width: 34px; height: 34px; }
+  .footer-pay { flex-wrap: wrap; gap: 6px; }
+  .footer-pay span { font-size: 0.66rem; padding: 3px 8px; }
+}

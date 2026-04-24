@@ -734,3 +734,29 @@ body.dark .role-picker-option:hover .role-picker-arrow { color: var(--p-pink-sof
   .role-picker-arrow { grid-column: 2; justify-self: end; margin-top: -8px; }
   .role-picker-icon { width: 46px; height: 46px; font-size: 1.2rem; }
 }
+
+/* Modal de producto — ajuste fino para pantallas ultra-estrechas */
+@media (max-width: 480px) {
+  .modal-product .modal-dialog { margin: 0.3rem; max-width: calc(100vw - 0.6rem); }
+  .modal-product .modal-content { border-radius: 16px; }
+  .modal-img-carousel { height: 240px; }
+  .modal-thumbnails img { width: 44px; height: 44px; }
+  .modal-product .modal-title,
+  #modalName { font-size: 1.05rem; }
+  .modal-price { font-size: 1.2rem; }
+  .modal-price .old-price { font-size: 0.8rem; }
+  .modal-save,
+  .price-discount-pct { font-size: 0.65rem; padding: 3px 8px; margin-left: 6px; }
+  .lu-tabs .nav-link { padding: 6px 8px; font-size: 0.75rem; }
+  .lu-tabs .nav-link span { display: none; }
+  .lu-tabs .nav-link i { font-size: 1rem; }
+  .btn-add-modal { padding: 10px 14px; font-size: 0.85rem; }
+  .btn-whatsapp-modal { padding: 10px 14px; font-size: 0.82rem; }
+  .qty-control button { width: 30px; height: 30px; }
+}
+/* WhatsApp picker modal — ajustes mobile */
+@media (max-width: 480px) {
+  #waPickerModal .modal-dialog { margin: 0.4rem; }
+  #waPickerModal .wa-picker-option { padding: 12px 14px; gap: 10px; }
+  #waPickerModal .wa-picker-icon { width: 40px; height: 40px; font-size: 1.1rem; }
+}

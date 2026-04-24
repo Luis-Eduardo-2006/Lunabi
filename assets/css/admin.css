@@ -1057,18 +1057,52 @@ body.dark .admin-live-preview::before {
   position: relative;
   isolation: isolate;
 }
+.admin-live-cta.fx-halo,
+.admin-slide-cta.fx-halo { --lu-halo-angle: 0deg; }
 .admin-live-cta.fx-halo::before,
-.admin-slide-cta.fx-halo::before {
+.admin-slide-cta.fx-halo::before,
+.admin-live-cta.fx-halo::after,
+.admin-slide-cta.fx-halo::after {
   content: '';
   position: absolute;
-  inset: -3px;
   border-radius: inherit;
-  background: conic-gradient(from 0deg,
-    #F6C6F9 0deg, #D9B7FF 60deg, #9F84E6 120deg,
-    #7732D9 180deg, #682ABF 240deg, #F6C6F9 320deg, #F6C6F9 360deg);
-  filter: blur(4px);
+  pointer-events: none;
+}
+/* Anillo exterior — centro transparente via mask-composite:exclude, así el
+ * halo solo se ve alrededor del botón sin tocar su fondo. */
+.admin-live-cta.fx-halo::before,
+.admin-slide-cta.fx-halo::before {
+  inset: -7px;
+  padding: 7px;
+  background: conic-gradient(from var(--lu-halo-angle),
+    #F6C6F9 0%, #D9B7FF 18%, #9F84E6 36%, #7732D9 54%,
+    #682ABF 72%, #e06ca1 86%, #F6C6F9 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  filter: blur(5px);
   z-index: -1;
-  animation: lu-fx-halo-spin 4s linear infinite;
+  animation: lu-fx-halo-spin 4.5s linear infinite;
+}
+.admin-live-cta.fx-halo::after,
+.admin-slide-cta.fx-halo::after {
+  inset: -16px;
+  background: radial-gradient(ellipse closest-side,
+    rgba(247,198,249,0.5), rgba(119,50,217,0.2) 45%, transparent 80%);
+  -webkit-mask: radial-gradient(ellipse closest-side, transparent 50%, #000 72%);
+          mask: radial-gradient(ellipse closest-side, transparent 50%, #000 72%);
+  filter: blur(7px);
+  z-index: -2;
+  animation: lu-fx-halo-pulse 2.8s ease-in-out infinite;
+}
+@supports not (background: paint(worklet)) {
+  .admin-live-cta.fx-halo::before,
+  .admin-slide-cta.fx-halo::before {
+    animation: lu-fx-halo-spin-fallback 4.5s linear infinite;
+    background: conic-gradient(from 0deg,
+      #F6C6F9, #D9B7FF, #9F84E6, #7732D9, #682ABF, #e06ca1, #F6C6F9);
+  }
 }
 .admin-live-cta.fx-glow,
 .admin-slide-cta.fx-glow { animation: lu-fx-glow-pulse 2.4s ease-in-out infinite; }
@@ -2178,4 +2212,77 @@ body.dark .admin-stage-pill.is-current {
     font-size: 0.72rem;
     margin-left: 3px;
   }
+}
+
+/* ============================================================
+ * RESPONSIVE EXTRA — tablet y mobile
+ * ============================================================ */
+@media (max-width: 900px) {
+  .admin-shell { grid-template-columns: 1fr; }
+  .admin-sidebar {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.6rem;
+    gap: 6px;
+    margin-bottom: 1rem;
+    width: 100%;
+    height: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .admin-sidebar::-webkit-scrollbar { height: 4px; }
+  .admin-sidebar::-webkit-scrollbar-thumb { background: var(--p-lila-mid); border-radius: 2px; }
+  .admin-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 14px;
+  }
+  .admin-tab span { display: inline; }
+  .admin-welcome { grid-template-columns: 1fr; text-align: center; }
+  .admin-welcome-right { justify-self: center; }
+  .admin-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .admin-page { padding: 1.2rem 0; }
+  .admin-header { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+  .admin-title { font-size: 1.4rem; }
+  .admin-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.65rem; }
+  .admin-stat { padding: 0.8rem 0.9rem; gap: 0.7rem; }
+  .admin-stat-icon { width: 38px; height: 38px; font-size: 0.95rem; }
+  .admin-stat-value { font-size: 1.15rem; }
+  .admin-stat-label { font-size: 0.66rem; }
+  .admin-stat-trend { font-size: 0.66rem; }
+  .admin-card { padding: 1rem; }
+  .admin-form { padding: 1rem; }
+  .admin-grid-2 { grid-template-columns: 1fr; }
+  .admin-table-wrap { overflow-x: auto; }
+  .admin-table { min-width: 520px; }
+  .admin-orders-toolbar { flex-direction: column; gap: 0.6rem; align-items: stretch; }
+  .admin-orders-filters { flex-wrap: wrap; }
+  .admin-stat-modal .modal-dialog { max-width: 100%; margin: 0.5rem; }
+  .admin-stat-modal .modal-content { border-radius: 16px; }
+  .admin-stat-detail-table { min-width: 480px; }
+  .admin-live-stage { min-height: 180px; }
+  .admin-live-title { font-size: clamp(1rem, 4vw, 1.4rem); }
+  .admin-live-desc { font-size: 0.78rem; }
+  .admin-pos-picker { width: 140px; }
+  .admin-slide-preview { height: 130px; }
+}
+@media (max-width: 480px) {
+  .admin-stats-grid { grid-template-columns: 1fr; }
+  .admin-stat { padding: 0.7rem 0.8rem; }
+  .admin-kicker { font-size: 0.7rem; }
+  .admin-welcome-title { font-size: 1.3rem; }
+  .admin-table { font-size: 0.78rem; min-width: 440px; }
+  .admin-table th,
+  .admin-table td { padding: 8px 10px; }
+  .admin-tab { padding: 7px 11px; font-size: 0.78rem; }
+  .admin-tab i { font-size: 0.95rem; }
+  .admin-form-title { font-size: 1rem; }
+  .admin-field-color .admin-color-input { flex-wrap: wrap; }
+  .admin-color-swatches { gap: 5px; }
+  .admin-swatch { width: 22px; height: 22px; }
+  .admin-pos-picker { width: 120px; }
 }
