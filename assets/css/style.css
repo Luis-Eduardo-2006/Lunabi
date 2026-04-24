@@ -116,6 +116,14 @@ html[data-theme="night"] body {
 /* ---------- RESET / BASE ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Informa al navegador del tema activo para que los widgets nativos
+ * (dropdowns de <select>, scrollbars, color picker, calendar, etc.) usen
+ * la paleta correspondiente. Sin esto, las <option> se pintan en blanco
+ * aunque el <select> padre tenga fondo oscuro. */
+:root { color-scheme: light; }
+body.dark,
+html[data-theme="night"] body { color-scheme: dark; }
+
 html {
   scroll-behavior: smooth;
   scrollbar-width: thin;
@@ -127,7 +135,12 @@ html {
   background: var(--p-lila-mid);
   border-radius: 10px;
 }
+::-webkit-scrollbar-thumb:hover { background: var(--p-purple-vibrant); }
+body.dark ::-webkit-scrollbar-thumb { background: rgba(217,183,255,0.45); }
+body.dark ::-webkit-scrollbar-thumb:hover { background: var(--p-pink-soft); }
+body.dark { scrollbar-color: rgba(217,183,255,0.45) transparent; }
 ::selection { background: var(--p-lavender-light); color: var(--p-purple-deep); }
+body.dark ::selection { background: rgba(247,198,249,0.35); color: #1a0f2e; }
 
 body {
   margin: 0;
@@ -1592,4 +1605,172 @@ body.dark .faq-group-title i {
   .hero-content h1 { font-size: 1.3rem; }
   .values-grid { grid-template-columns: 1fr; }
   .container { padding-left: 0.7rem; padding-right: 0.7rem; }
+}
+
+/* ============================================================
+ * DARK MODE — fixes globales
+ * Cubre inputs nativos, modales Bootstrap, autofill y transición.
+ * ============================================================ */
+
+/* Transición suave al cambiar de tema — NO se aplica a animations para
+ * evitar que animaciones internas (halo, pulse) queden atrapadas. */
+body,
+body * {
+  transition:
+    background-color 0.45s ease,
+    border-color 0.45s ease,
+    color 0.45s ease;
+}
+/* Excepciones: elementos con animaciones propias no transitionan colores
+ * porque se interpone con sus keyframes. */
+.hero-content h1 .char,
+.admin-pos-cell,
+.admin-swatch,
+.admin-stat-value,
+.lu-chat-msg,
+.product-card,
+.orb,
+.skintest-option,
+.skintest-step,
+.hero-cta,
+.hero-cta::before,
+.hero-cta::after,
+.admin-live-cta,
+.admin-slide-cta {
+  transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+
+/* Inputs / textarea / select nativos — por defecto usan colores del OS.
+ * Sobreescribimos con los tokens para que cambien con el tema. */
+input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+textarea,
+select {
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
+}
+
+/* <select> y sus <option> — el dropdown nativo del sistema no siempre
+ * respeta los estilos CSS. Usamos color-scheme para darle al navegador una
+ * pista del tema, y !important en options para sobreescribir los estilos
+ * computados del widget del OS. TODAS las opciones tienen el mismo fondo
+ * oscuro — sin excepciones por value="" o selected. */
+select { color-scheme: light; }
+body.dark select { color-scheme: dark; }
+
+option,
+optgroup {
+  background-color: #ffffff !important;
+  color: #3a2a5c !important;
+}
+optgroup {
+  font-weight: 700;
+  font-style: normal;
+}
+body.dark option,
+body.dark optgroup {
+  background-color: #221540 !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+body.dark optgroup {
+  background-color: #1a0f2e !important;
+  color: var(--p-pink-soft) !important;
+  font-weight: 700;
+  font-style: normal;
+}
+body.dark option:checked,
+body.dark option:hover,
+body.dark option:focus {
+  background: var(--p-purple-vibrant) !important;
+  color: #fff !important;
+}
+body.dark option:disabled {
+  color: rgba(255,255,255,0.35) !important;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--p-purple-vibrant);
+  box-shadow: 0 0 0 3px rgba(119,50,217,0.15);
+}
+body.dark input:focus,
+body.dark textarea:focus,
+body.dark select:focus {
+  border-color: var(--p-pink-soft);
+  box-shadow: 0 0 0 3px rgba(247,198,249,0.18);
+}
+/* Placeholder legible en ambos modos */
+::placeholder { color: var(--text-muted); opacity: 0.7; }
+/* Autofill de Chrome — matcha con dark mode */
+body.dark input:-webkit-autofill,
+body.dark textarea:-webkit-autofill,
+body.dark select:-webkit-autofill {
+  -webkit-text-fill-color: rgba(255,255,255,0.92);
+  -webkit-box-shadow: 0 0 0px 1000px #2a1a4d inset;
+  caret-color: #fff;
+}
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #3a2a5c;
+  -webkit-box-shadow: 0 0 0px 1000px var(--p-beige-soft) inset;
+}
+
+/* Modales Bootstrap — el backdrop y contenido tienen fondo blanco por
+ * default. Los nuestros ya usan tokens, pero aseguramos Bootstrap genéricos. */
+body.dark .modal-content {
+  background-color: var(--modal-bg);
+  color: var(--text-main);
+  border: 1px solid var(--modal-border);
+}
+body.dark .modal-header,
+body.dark .modal-footer {
+  border-color: rgba(217,183,255,0.18);
+}
+body.dark .modal-backdrop.show { opacity: 0.75; }
+body.dark .btn-close {
+  filter: invert(1) hue-rotate(200deg) brightness(1.2);
+}
+
+/* Dropdowns Bootstrap — algunos (ej. mega-menu ya manejado) están OK,
+ * pero cubrimos los genéricos. */
+body.dark .dropdown-menu {
+  background-color: var(--dropdown-bg);
+  border-color: var(--dropdown-border);
+}
+body.dark .dropdown-item { color: var(--dropdown-item); }
+body.dark .dropdown-item:hover,
+body.dark .dropdown-item:focus {
+  background-color: var(--dropdown-hover-bg);
+  color: var(--dropdown-hover-fg);
+}
+body.dark .dropdown-divider { border-color: rgba(217,183,255,0.18); }
+
+/* Bootstrap .form-control / .form-select fallback */
+body.dark .form-control,
+body.dark .form-select {
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--input-border);
+}
+body.dark .form-control:focus,
+body.dark .form-select:focus {
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--p-pink-soft);
+  box-shadow: 0 0 0 3px rgba(247,198,249,0.18);
+}
+
+/* Horizontal rules y detalles */
+body.dark hr { border-color: rgba(217,183,255,0.18); }
+body.dark code {
+  background: rgba(247,198,249,0.1);
+  color: var(--p-pink-soft);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+code {
+  background: rgba(159,132,230,0.14);
+  color: var(--p-purple-deep);
+  padding: 1px 6px;
+  border-radius: 5px;
 }

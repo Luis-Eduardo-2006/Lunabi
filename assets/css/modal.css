@@ -425,7 +425,8 @@ body.dark .btn-add-modal:hover { background: var(--p-purple-deep); }
   text-decoration: none;
 }
 .btn-whatsapp-modal:hover { background: rgba(37,211,102,0.22); color: #1f9d4e; transform: translateY(-1px); }
-body.dark .btn-whatsapp-modal { color: #4fd884; }
+body.dark .btn-whatsapp-modal { color: #4fd884; background: rgba(79,216,132,0.12); border-color: rgba(79,216,132,0.35); }
+body.dark .btn-whatsapp-modal:hover { background: rgba(79,216,132,0.22); color: #6be89b; }
 
 @media (max-width: 767px) {
   .modal-img-carousel { height: 240px; }

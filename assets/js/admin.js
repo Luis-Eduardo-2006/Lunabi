@@ -229,21 +229,13 @@
   }
 
   /* ---------- ANIMATED COUNTER ---------- */
-  function animateCounter(el, target, { currency = false, duration = 900 } = {}) {
+  function animateCounter(el, target, { currency = false } = {}) {
     if (!el) return;
     target = Number(target) || 0;
-    const start = performance.now();
     const fmt = (n) => currency
       ? 'S/ ' + n.toFixed(2)
       : Math.round(n).toLocaleString('es-PE');
-    function tick(now) {
-      const p = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      el.textContent = fmt(target * eased);
-      if (p < 1) requestAnimationFrame(tick);
-      else el.textContent = fmt(target);
-    }
-    requestAnimationFrame(tick);
+    el.textContent = fmt(target);
   }
 
   /* ---------- IMAGE EDITOR (modal) ----------

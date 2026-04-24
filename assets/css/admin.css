@@ -387,6 +387,39 @@ body.dark .admin-field input[readonly] {
   color: var(--p-pink-soft);
 }
 
+/* <option> dentro de los <select> del admin — cubre todos los panels
+ * (productos, carrusel, marcas). Mismo estilo uniforme para TODAS las
+ * opciones sin excepciones por value="" o :first-child. */
+body.dark .admin-panel select,
+body.dark .admin-form select,
+body.dark .admin-field select {
+  color-scheme: dark;
+  background-color: var(--input-bg);
+  color: var(--input-text);
+}
+body.dark .admin-panel select option,
+body.dark .admin-form select option,
+body.dark .admin-field select option {
+  background-color: #221540 !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+body.dark .admin-panel select optgroup,
+body.dark .admin-form select optgroup,
+body.dark .admin-field select optgroup {
+  background-color: #1a0f2e !important;
+  color: var(--p-pink-soft) !important;
+  font-weight: 700;
+}
+body.dark .admin-panel select option:checked,
+body.dark .admin-form select option:checked,
+body.dark .admin-field select option:checked,
+body.dark .admin-panel select option:hover,
+body.dark .admin-form select option:hover,
+body.dark .admin-field select option:hover {
+  background-color: var(--p-purple-vibrant) !important;
+  color: #fff !important;
+}
+
 .admin-fieldset {
   border: 1px dashed var(--card-border);
   border-radius: 12px;
@@ -840,6 +873,14 @@ body.dark .admin-field-color .admin-color-input { background: rgba(247,198,249,0
   border-color: var(--p-purple-deep);
   box-shadow: 0 0 0 3px rgba(119,50,217,0.15);
 }
+body.dark .admin-field-color input[type="color"] { background: rgba(255,255,255,0.08); }
+body.dark .admin-color-input.has-value input[type="color"] {
+  border-color: var(--p-pink-soft);
+  box-shadow: 0 0 0 3px rgba(247,198,249,0.18);
+}
+body.dark .admin-field-color input[type="text"] { color: var(--input-text); }
+body.dark .admin-swatch { border-color: rgba(217,183,255,0.28); }
+body.dark .admin-swatch:hover { border-color: var(--p-pink-soft); box-shadow: 0 3px 10px rgba(247,198,249,0.35); }
 .admin-field-color input[type="text"] {
   flex: 1;
   border: none;
@@ -926,6 +967,17 @@ body.dark .admin-swatch[data-swatch="#ffffff"] { border-color: rgba(255,255,255,
   border: 3px solid #fff;
   box-shadow: 0 2px 6px rgba(104,42,191,0.35);
   cursor: pointer;
+}
+body.dark .admin-range { background: linear-gradient(90deg, rgba(217,183,255,0.45), var(--p-pink-soft)); }
+body.dark .admin-range::-webkit-slider-thumb {
+  background: var(--p-pink-soft);
+  border-color: var(--p-purple-deep);
+  box-shadow: 0 2px 8px rgba(247,198,249,0.5);
+}
+body.dark .admin-range::-moz-range-thumb {
+  background: var(--p-pink-soft);
+  border-color: var(--p-purple-deep);
+  box-shadow: 0 2px 8px rgba(247,198,249,0.5);
 }
 .admin-field [data-border-readout] {
   margin-left: 8px;
