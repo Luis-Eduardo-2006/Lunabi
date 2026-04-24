@@ -84,10 +84,7 @@
     if (!client) return LS.get('lunabi_admin_slides', []);
     const { data, error } = await client.from('hero_slides').select('*').eq('is_active', true).order('orden');
     if (error) { console.warn('[LuApi] listSlides', error); return []; }
-    return (data || []).map(s => ({
-      imagen: s.imagen, titulo: s.titulo, descripcion: s.descripcion,
-      botonTexto: s.boton_texto, botonLink: s.boton_link, badge: s.badge
-    }));
+    return (data || []).map(mapSlideRow);
   }
 
   /* --------------- AUTH --------------- */
@@ -341,9 +338,11 @@
       mas_vendido: !!product.masVendido,
       en_oferta:   !!product.enOferta
     };
-    const { data, error } = product.id
-      ? await client.from('products').update(row).eq('id', product.id).select('*').single()
-      : await client.from('products').insert(row).select('*').single();
+    // Upsert por slug (unique) — insert si no existe, update si sí.
+    // Independiente del id local que usa el admin UI para referenciar.
+    const { data, error } = await client.from('products')
+      .upsert(row, { onConflict: 'slug' })
+      .select('*').single();
     if (error) throw error;
     return data;
   }
@@ -371,9 +370,10 @@
       nombre: brand.nombre, slug: brand.slug,
       logo: brand.logo || null, descripcion: brand.descripcion || ''
     };
-    const { data, error } = brand.id
-      ? await client.from('brands').update(row).eq('id', brand.id).select('*').single()
-      : await client.from('brands').insert(row).select('*').single();
+    // Upsert por slug — inserta si es nueva, actualiza si ya existía
+    const { data, error } = await client.from('brands')
+      .upsert(row, { onConflict: 'slug' })
+      .select('*').single();
     if (error) throw error;
     return data;
   }
@@ -393,30 +393,82 @@
       const list = LS.get('lunabi_admin_slides', []);
       if (typeof idxOrId === 'number') list[idxOrId] = slide; else list.push(slide);
       LS.set('lunabi_admin_slides', list);
-      return;
+      return slide;
     }
     const client = await ensureSupabase();
     const row = {
       orden: slide.orden || 0, imagen: slide.imagen, titulo: slide.titulo,
       descripcion: slide.descripcion || '', boton_texto: slide.botonTexto || '',
-      boton_link: slide.botonLink || '#', badge: slide.badge || null
+      boton_link: slide.botonLink || '#', badge: slide.badge || null,
+      pos_h: ['left','center','right'].includes(slide.posH) ? slide.posH : 'center',
+      pos_v: ['top','middle','bottom'].includes(slide.posV) ? slide.posV : 'middle',
+      titulo_color:  slide.tituloColor || null,
+      desc_color:    slide.descColor   || null,
+      boton_bg:      slide.botonBg     || null,
+      boton_color:   slide.botonColor  || null,
+      boton_border_color: slide.botonBorderColor || null,
+      boton_border_width: Math.max(0, Math.min(8, Number(slide.botonBorderWidth) || 0)),
+      boton_radius:  ['default','square','rounded','pill'].includes(slide.botonRadius) ? slide.botonRadius : 'default',
+      boton_shadow:  ['default','none','sm','md','lg'].includes(slide.botonShadow) ? slide.botonShadow : 'default',
+      boton_shadow_color: slide.botonShadowColor || null,
+      boton_border_effect: ['none','halo','glow','double','neon'].includes(slide.botonBorderEffect) ? slide.botonBorderEffect : 'none',
+      badge_bg:      slide.badgeBg     || null,
+      badge_color:   slide.badgeColor  || null,
+      fuente_titulo: slide.fuenteTitulo || null,
+      fuente_texto:  slide.fuenteTexto  || null
     };
-    if (idxOrId && typeof idxOrId === 'object' && idxOrId.id) {
-      await client.from('hero_slides').update(row).eq('id', idxOrId.id);
-    } else {
-      await client.from('hero_slides').insert(row);
+    // UPDATE si tenemos el id real de Supabase (slide.id o idxOrId.id).
+    // En cualquier otro caso INSERT (incluye cuando idxOrId es un número —
+    // ése es sólo el índice local y NO sirve para identificar la fila remota).
+    const remoteId = (slide && slide.id) || (idxOrId && typeof idxOrId === 'object' && idxOrId.id) || null;
+    if (remoteId) {
+      const { data, error } = await client.from('hero_slides')
+        .update(row).eq('id', remoteId).select('*').single();
+      if (error) throw error;
+      return mapSlideRow(data);
     }
+    const { data, error } = await client.from('hero_slides')
+      .insert(row).select('*').single();
+    if (error) throw error;
+    return mapSlideRow(data);
+  }
+
+  function mapSlideRow(s) {
+    if (!s) return null;
+    return {
+      id: s.id,
+      imagen: s.imagen, titulo: s.titulo, descripcion: s.descripcion,
+      botonTexto: s.boton_texto, botonLink: s.boton_link, badge: s.badge,
+      posH: s.pos_h || 'center', posV: s.pos_v || 'middle',
+      tituloColor:  s.titulo_color  || '',
+      descColor:    s.desc_color    || '',
+      botonBg:      s.boton_bg      || '',
+      botonColor:   s.boton_color   || '',
+      botonBorderColor: s.boton_border_color || '',
+      botonBorderWidth: Number(s.boton_border_width) || 0,
+      botonRadius:  s.boton_radius  || 'default',
+      botonShadow:  s.boton_shadow  || 'default',
+      botonShadowColor: s.boton_shadow_color || '',
+      botonBorderEffect: s.boton_border_effect || 'none',
+      badgeBg:      s.badge_bg      || '',
+      badgeColor:   s.badge_color   || '',
+      fuenteTitulo: s.fuente_titulo || '',
+      fuenteTexto:  s.fuente_texto  || ''
+    };
   }
 
   async function adminDeleteSlide(idxOrId) {
     if (!configured) {
       const list = LS.get('lunabi_admin_slides', []);
-      list.splice(idxOrId, 1);
+      const i = (idxOrId && typeof idxOrId === 'object') ? idxOrId.index : idxOrId;
+      if (typeof i === 'number') list.splice(i, 1);
       LS.set('lunabi_admin_slides', list);
       return;
     }
     const client = await ensureSupabase();
-    await client.from('hero_slides').delete().eq('id', idxOrId.id || idxOrId);
+    const remoteId = (idxOrId && typeof idxOrId === 'object') ? idxOrId.id : idxOrId;
+    if (!remoteId) return;
+    await client.from('hero_slides').delete().eq('id', remoteId);
   }
 
   /* --------------- SITE SETTINGS --------------- */

@@ -48,6 +48,9 @@
                 </div>
               </div>
               <hr>
+              <a class="user-menu-item user-menu-item-admin" id="userMenuAdmin" href="admin.html" style="display:none">
+                <i class="bi bi-shield-check"></i> Panel de administrador
+              </a>
               <a class="user-menu-item" href="cuenta.html">
                 <i class="bi bi-person-circle"></i> Mi cuenta
               </a>
@@ -480,6 +483,41 @@
     </aside>
   `;
 
+  /* Modal para que los admins elijan si entran como administradora o
+   * como usuaria tras iniciar sesión. Se muestra solo cuando LuApi detecta
+   * que profiles.is_admin = true. auth.js cablea los botones. */
+  const ROLE_PICKER_HTML = `
+    <div class="modal fade role-picker-modal" id="rolePickerModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="bi bi-shield-check"></i> ¿Cómo quieres entrar?</h5>
+          </div>
+          <div class="modal-body">
+            <p class="role-picker-lead">Tu cuenta tiene permisos de administración. Elige con qué rol continuar — puedes volver a elegir cerrando sesión.</p>
+            <div class="role-picker-options">
+              <button class="role-picker-option" data-role="admin" type="button">
+                <div class="role-picker-icon role-icon-admin"><i class="bi bi-gear-fill"></i></div>
+                <div class="role-picker-body">
+                  <span class="role-picker-label">Como administradora</span>
+                  <span class="role-picker-hint">Panel, pedidos, CRUD de productos / marcas / carrusel</span>
+                </div>
+                <i class="bi bi-chevron-right role-picker-arrow"></i>
+              </button>
+              <button class="role-picker-option" data-role="user" type="button">
+                <div class="role-picker-icon role-icon-user"><i class="bi bi-person-hearts"></i></div>
+                <div class="role-picker-body">
+                  <span class="role-picker-label">Como usuaria</span>
+                  <span class="role-picker-hint">Navega la tienda, compra, guarda favoritos y rutina</span>
+                </div>
+                <i class="bi bi-chevron-right role-picker-arrow"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
   /* Picker modal para elegir número de WhatsApp según la ubicación de
    * la clienta (local vs nacional). El markup se inyecta junto con los
    * demás modales; main.js lo cablea al exponer window.openWhatsApp. */
@@ -532,7 +570,7 @@
        * para no crear IDs duplicados. En el resto de páginas sí se inyecta. */
       const here = (window.location.pathname.split('/').pop() || '').toLowerCase();
       const isAuthPage = here === 'login.html' || here === 'registro.html';
-      modal.innerHTML = (isAuthPage ? MODAL_HTML : MODAL_HTML + AUTH_MODAL_HTML) + WA_PICKER_HTML;
+      modal.innerHTML = (isAuthPage ? MODAL_HTML : MODAL_HTML + AUTH_MODAL_HTML) + WA_PICKER_HTML + ROLE_PICKER_HTML;
     }
     if (cart) cart.innerHTML = CART_HTML;
 
@@ -545,18 +583,22 @@
     }
   }
 
-  /* Carga síncrona-temprana de Supabase config + api.js. Se inyectan
-   * antes de injectComponents() para que window.LuApi esté disponible
-   * cuando main.js/carrito.js/admin.js hagan sus checks. api.js carga el
-   * SDK de Supabase bajo demanda sólo si el config trae url+anonKey. */
+  /* Carga síncrona-temprana de Supabase config + api.js. IMPORTANTE:
+   * los scripts inyectados dinámicamente son async por defecto (ejecutan
+   * en el orden que terminan de cargar, no el de inserción). Al poner
+   * async=false forzamos el orden: supabase.config.js SIEMPRE corre
+   * primero, así window.LUNABI_SUPABASE está definido cuando api.js
+   * computa `configured` y expone LuApi.isRemote() correctamente. */
   (function loadApi() {
     if (document.getElementById('luSupaCfg')) return;
     const cfg = document.createElement('script');
     cfg.id = 'luSupaCfg';
     cfg.src = 'assets/js/supabase.config.js';
+    cfg.async = false;
     document.head.appendChild(cfg);
     const api = document.createElement('script');
     api.src = 'assets/js/api.js';
+    api.async = false;
     document.head.appendChild(api);
   })();
 

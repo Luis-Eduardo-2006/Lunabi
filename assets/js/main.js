@@ -66,7 +66,9 @@ window.openWhatsApp = function(message = '') {
  * HTML, ícono del footer, o cualquier <a class="lu-wa-link">). Así no
  * tenemos que editar los 15 HTMLs individuales. */
 document.addEventListener('click', (e) => {
-  const trigger = e.target.closest('.whatsapp-float, .lu-wa-link');
+  const t = e.target;
+  if (!t || t.nodeType !== 1 || typeof t.closest !== 'function') return;
+  const trigger = t.closest('.whatsapp-float, .lu-wa-link');
   if (!trigger) return;
   e.preventDefault();
   window.openWhatsApp('');
@@ -193,6 +195,8 @@ document.addEventListener('click', (e) => {
     if (typeof window.showToast === 'function') {
       window.showToast(active ? 'Añadido a favoritos' : 'Quitado de favoritos', 'info');
     }
+    // Notifica a otras vistas (ej. cuenta.html) que el estado cambió.
+    document.dispatchEvent(new CustomEvent('lunabi:favs-changed', { detail: { id, active } }));
   };
 
   // Sincroniza un botón `.btn-fav-detail` con el estado actual del producto.
@@ -218,6 +222,11 @@ document.addEventListener('click', (e) => {
 window.renderProductCard = function(p, i = 0) {
   const brand = brands.find(b => b.slug === p.marca);
   const hasDiscount = p.precioAntes && p.precioAntes > p.precio;
+  const discountPct = hasDiscount
+    ? Math.round((p.precioAntes - p.precio) / p.precioAntes * 100)
+    : 0;
+  const showSaleBadge = hasDiscount || p.enOferta;
+  const saleLabel = hasDiscount ? `-${discountPct}%` : 'SALE';
   const bestBadge = p.masVendido
     ? '<span class="badge-bestseller"><i class="bi bi-star-fill"></i> Más vendido</span>'
     : '';
@@ -230,7 +239,7 @@ window.renderProductCard = function(p, i = 0) {
           <a href="producto.html?id=${p.id}" class="card-img-wrap" style="display:block">
             ${bestBadge}
             <span class="badge-cat">${String(catLabel).toLowerCase()}</span>
-            ${hasDiscount ? '<span class="badge-sale">SALE</span>' : ''}
+            ${showSaleBadge ? `<span class="badge-sale">${saleLabel}</span>` : ''}
             <img src="${p.imagenes[0]}" alt="${p.nombre}" loading="lazy">
           </a>
           <button class="btn-fav${isFav ? ' active' : ''}" data-fav-id="${p.id}" type="button"
@@ -374,8 +383,11 @@ window.openProductModal = function(id) {
   }
 
   document.getElementById('modalName').textContent = p.nombre;
+  const modalPct = hasDiscount
+    ? Math.round((p.precioAntes - p.precio) / p.precioAntes * 100)
+    : 0;
   document.getElementById('modalPrice').innerHTML = hasDiscount
-    ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}<span class="modal-save">AHORRA S/${(p.precioAntes - p.precio).toFixed(2)}</span>`
+    ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}<span class="price-discount-pct">-${modalPct}%</span><span class="modal-save">AHORRA S/${(p.precioAntes - p.precio).toFixed(2)}</span>`
     : `S/ ${p.precio.toFixed(2)}`;
 
   const mainImg = document.querySelector('#modalMainImg img');
@@ -446,7 +458,9 @@ function initModal() {
 /* ================================================================ */
 function initEffects() {
   document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.ripple-wrap');
+    const t = e.target;
+    if (!t || t.nodeType !== 1 || typeof t.closest !== 'function') return;
+    const btn = t.closest('.ripple-wrap');
     if (!btn) return;
     const rect = btn.getBoundingClientRect();
     const ripple = document.createElement('div');
@@ -460,7 +474,9 @@ function initEffects() {
   });
 
   document.addEventListener('mousemove', (e) => {
-    const card = e.target.closest('.product-card');
+    const t = e.target;
+    if (!t || t.nodeType !== 1 || typeof t.closest !== 'function') return;
+    const card = t.closest('.product-card');
     if (!card) return;
     const rect = card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
@@ -468,7 +484,9 @@ function initEffects() {
     card.style.transform = `translateY(-6px) perspective(600px) rotateX(${-y * 8}deg) rotateY(${x * 8}deg) translateZ(10px)`;
   });
   document.addEventListener('mouseleave', (e) => {
-    const card = e.target.closest('.product-card');
+    const t = e.target;
+    if (!t || t.nodeType !== 1 || typeof t.closest !== 'function') return;
+    const card = t.closest('.product-card');
     if (card) {
       card.style.transform = '';
       card.style.transition = 'transform 0.5s cubic-bezier(0.23,1,0.32,1), box-shadow 0.35s ease';
@@ -509,23 +527,77 @@ function initHero() {
   if (Array.isArray(adminSlides) && adminSlides.length) {
     const safe = s => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const indicators = adminSlides.map((_, i) =>
-      `<button type="button" data-bs-target="#heroBannerCarousel" data-bs-slide-to="${i}" ${i === 0 ? 'class="active"' : ''}></button>`
-    ).join('');
-    const items = adminSlides.map((s, i) => `
+    const posH = v => ['left','center','right'].includes(v) ? v : 'center';
+    const posV = v => ['top','middle','bottom'].includes(v) ? v : 'middle';
+    const hexRe = /^#[0-9a-f]{6}$/i;
+    const cssColor = v => hexRe.test(v || '') ? v : '';
+    const cssFont  = v => {
+      const ok = [`'Bodoni Moda', serif`, `'Syne', sans-serif`, `'Epilogue', sans-serif`];
+      return ok.includes(v) ? v : '';
+    };
+    const styleAttr = pairs => pairs.filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join(';');
+    const RADIUS_MAP = { default: '', square: '4px', rounded: '14px', pill: '999px' };
+    const SHADOW_SPEC = {
+      default: null,
+      none:    { offset: null },
+      sm: { offset: '0 2px 6px',   alpha: 0.28, fallback: 'rgba(0,0,0,0.12)' },
+      md: { offset: '0 6px 20px',  alpha: 0.42, fallback: 'rgba(104,42,191,0.28)' },
+      lg: { offset: '0 14px 34px', alpha: 0.55, fallback: 'rgba(104,42,191,0.40)' }
+    };
+    const hexRgba = (h, a) => {
+      if (!hexRe.test(h || '')) return '';
+      const r = parseInt(h.slice(1,3), 16);
+      const g = parseInt(h.slice(3,5), 16);
+      const b = parseInt(h.slice(5,7), 16);
+      return `rgba(${r},${g},${b},${a})`;
+    };
+    const shadowCss = (size, color) => {
+      const spec = SHADOW_SPEC[size];
+      if (!spec) return '';
+      if (!spec.offset) return 'none';
+      return `${spec.offset} ${hexRgba(color, spec.alpha) || spec.fallback}`;
+    };
+    const borderCss = (w, c) => {
+      const n = Math.max(0, Math.min(8, Number(w) || 0));
+      if (n <= 0) return '';
+      return hexRe.test(c || '') ? `${n}px solid ${c}` : '';
+    };
+
+    const items = adminSlides.map((s, i) => {
+      const titleStyle = styleAttr([['color', cssColor(s.tituloColor)], ['font-family', cssFont(s.fuenteTitulo)]]);
+      const descStyle  = styleAttr([['color', cssColor(s.descColor)],   ['font-family', cssFont(s.fuenteTexto)]]);
+      const shCol = cssColor(s.botonShadowColor);
+      const fxName = ['halo','glow','neon','double'].includes(s.botonBorderEffect) ? s.botonBorderEffect : '';
+      const fxColor = shCol || cssColor(s.botonBorderColor) || cssColor(s.botonBg) || '';
+      const ctaStyle   = styleAttr([
+        ['background',  cssColor(s.botonBg)],
+        ['color',       cssColor(s.botonColor)],
+        ['font-family', cssFont(s.fuenteTexto)],
+        ['border',      borderCss(s.botonBorderWidth, s.botonBorderColor)],
+        ['border-radius', RADIUS_MAP[s.botonRadius] || ''],
+        ['box-shadow',  shadowCss(s.botonShadow, shCol)],
+        ['--lu-fx-color', fxColor]
+      ]);
+      const ctaClass = `hero-cta${fxName ? ` fx-${fxName}` : ''}`;
+      const badgeStyle = styleAttr([
+        ['background', cssColor(s.badgeBg)],
+        ['color',      cssColor(s.badgeColor)]
+      ]);
+      return `
       <div class="carousel-item ${i === 0 ? 'active' : ''}">
-        <div class="hero-slide hero-slide-${(i % 3) + 1}" style="background-image:url('${safe(s.imagen)}'); background-size:cover; background-position:center">
+        <div class="hero-slide hero-slide-${(i % 3) + 1} pos-h-${posH(s.posH)} pos-v-${posV(s.posV)}" style="background-image:url('${safe(s.imagen)}'); background-size:cover; background-position:center">
           <div class="hero-content">
-            ${s.badge ? `<span class="hero-sale-badge">${safe(s.badge)}</span>` : ''}
-            <h1 class="hero-headline">${safe(s.titulo)}</h1>
-            <p>${safe(s.descripcion)}</p>
-            <a href="${safe(s.botonLink || '#')}" class="hero-cta">${safe(s.botonTexto || 'Ver más')}</a>
+            ${s.badge ? `<span class="hero-sale-badge"${badgeStyle ? ` style="${badgeStyle}"` : ''}>${safe(s.badge)}</span>` : ''}
+            <h1 class="hero-headline"${titleStyle ? ` style="${titleStyle}"` : ''}>${safe(s.titulo)}</h1>
+            <p${descStyle ? ` style="${descStyle}"` : ''}>${safe(s.descripcion)}</p>
+            <a href="${safe(s.botonLink || '#')}" class="${ctaClass}"${ctaStyle ? ` style="${ctaStyle}"` : ''}>${safe(s.botonTexto || 'Ver más')}</a>
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     const indWrap = carousel.querySelector('.carousel-indicators');
     const inner = carousel.querySelector('.carousel-inner');
-    if (indWrap) indWrap.innerHTML = indicators;
+    if (indWrap) indWrap.remove();
     if (inner) inner.innerHTML = items;
   }
 
@@ -683,8 +755,11 @@ function renderProductoPage() {
 
   const priceEl = document.getElementById('productoPrice');
   if (priceEl) {
+    const pct = hasDiscount
+      ? Math.round((p.precioAntes - p.precio) / p.precioAntes * 100)
+      : 0;
     priceEl.innerHTML = hasDiscount
-      ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}`
+      ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}<span class="price-discount-pct">-${pct}%</span><span class="modal-save">AHORRA S/${(p.precioAntes - p.precio).toFixed(2)}</span>`
       : `S/ ${p.precio.toFixed(2)}`;
   }
 

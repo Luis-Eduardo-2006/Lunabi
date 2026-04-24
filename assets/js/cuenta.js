@@ -310,26 +310,61 @@
       </article>`;
   }
 
-  /* ---------- FAVORITOS ---------- */
-  function renderFavoritos() {
+  /* ---------- FAVORITOS ----------
+   * Fuente de datos: localStorage siempre, + Supabase en modo remoto.
+   * Hacemos unión para que funcione aun si alguno de los lados está
+   * temporalmente desincronizado (ej. fav guardado en otro dispositivo
+   * o fallo al sincronizar con Supabase por FK con producto admin). */
+  async function renderFavoritos() {
     const host = document.getElementById('cuentaPanelFavoritos');
-    const favs = getFavs();
-    const products = (window.products || []).filter(p => favs.includes(Number(p.id)));
+
+    // Muestra primero un esqueleto para evitar "parpadeo vacío"
+    host.innerHTML = `
+      <div class="cuenta-panel-header">
+        <h2 class="cuenta-panel-title"><i class="bi bi-heart-fill"></i> Mis favoritos</h2>
+      </div>
+      <p class="cuenta-rutina-hint" style="text-align:center">Cargando tus favoritos…</p>`;
+
+    // Empieza con favoritos locales
+    let favIds = getFavs().map(Number).filter(Boolean);
+
+    // Fusiona con los favoritos remotos (si estamos conectados)
+    if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+      try {
+        const remote = await window.LuApi.listFavorites();
+        if (Array.isArray(remote)) {
+          const set = new Set(favIds.concat(remote.map(Number)).filter(Boolean));
+          favIds = Array.from(set);
+          // Persiste la unión de vuelta a localStorage (útil si entraste desde otro dispositivo)
+          try { localStorage.setItem('lunabi_favs', JSON.stringify(favIds)); } catch (e) {}
+        }
+      } catch (e) { console.warn('[cuenta] favoritos remotos', e); }
+    }
+
+    const allProducts = window.products || [];
+    const products = allProducts.filter(p => favIds.includes(Number(p.id)));
+
     const hdr = `
       <div class="cuenta-panel-header">
         <h2 class="cuenta-panel-title"><i class="bi bi-heart-fill"></i> Mis favoritos</h2>
         ${products.length ? `<button class="cuenta-btn-primary" id="favAddAll" type="button"><i class="bi bi-bag-plus"></i> Añadir todo al carrito</button>` : ''}
       </div>`;
+
     if (!products.length) {
+      // Distingue: ¿tienes favoritos guardados pero los productos ya no existen?
+      const reason = favIds.length
+        ? '<p>Tus favoritos ya no están en el catálogo activo. Puede que hayan sido eliminados o estén fuera de stock.</p>'
+        : '<p>Pulsa el corazón en cualquier producto para guardarlo aquí y no perderlo de vista.</p>';
       host.innerHTML = hdr + `
         <div class="cuenta-empty">
           <i class="bi bi-heart"></i>
-          <h3>Sin favoritos aún</h3>
-          <p>Pulsa el corazón en cualquier producto para guardarlo aquí y no perderlo de vista.</p>
+          <h3>${favIds.length ? 'Favoritos no disponibles' : 'Sin favoritos aún'}</h3>
+          ${reason}
           <a href="skincare.html" class="cuenta-btn-primary"><i class="bi bi-search"></i> Explorar productos</a>
         </div>`;
       return;
     }
+
     const grid = products.map((p, i) => window.renderProductCard(p, i)).join('');
     host.innerHTML = hdr + `<div class="row g-4">${grid}</div>`;
     if (typeof window.observeFadeUps === 'function') window.observeFadeUps();
@@ -439,10 +474,30 @@
     const sinceFmt = since
       ? new Date(since).toLocaleString('es-PE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : '—';
+
+    // Card extra solo para administradoras: acceso directo al panel.
+    const adminCard = user.is_admin
+      ? `
+        <div class="cuenta-profile-card cuenta-admin-card">
+          <div class="cuenta-admin-head">
+            <div class="cuenta-admin-icon"><i class="bi bi-shield-check"></i></div>
+            <div>
+              <h3 class="cuenta-panel-title" style="font-size:1.05rem;margin:0">Acceso administrador</h3>
+              <p class="cuenta-rutina-hint" style="margin:3px 0 0">Gestiona productos, pedidos, marcas y el carrusel del inicio.</p>
+            </div>
+          </div>
+          <a href="admin.html" class="cuenta-btn-primary cuenta-admin-cta">
+            <i class="bi bi-gear-fill"></i> Ir al panel de administrador
+          </a>
+        </div>`
+      : '';
+
     host.innerHTML = `
       <div class="cuenta-panel-header">
         <h2 class="cuenta-panel-title"><i class="bi bi-person-circle"></i> Mi perfil</h2>
+        ${user.is_admin ? '<span class="cuenta-rutina-tag" style="background:linear-gradient(135deg,#682ABF,#7732D9);color:#fff"><i class="bi bi-shield-check"></i> Admin</span>' : ''}
       </div>
+      ${adminCard}
       <div class="cuenta-profile-card">
         <div class="cuenta-profile-row">
           <span class="cuenta-profile-label">Nombre</span>
@@ -466,9 +521,14 @@
           <button class="cuenta-danger-btn" id="btnLogout" type="button"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
         </div>
       </div>`;
+
     const btn = document.getElementById('btnLogout');
-    if (btn) btn.addEventListener('click', () => {
+    if (btn) btn.addEventListener('click', async () => {
       if (!confirm('¿Seguro que quieres cerrar sesión?')) return;
+      // Cerrar sesión en Supabase también (si estamos en modo remoto)
+      if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+        try { await window.LuApi.signOut(); } catch (e) { /* noop */ }
+      }
       localStorage.removeItem('lunabi_session');
       window.location.href = 'index.html';
     });
@@ -513,6 +573,19 @@
     renderFavoritos();
     renderRutina(user);
     renderPerfil(user);
+
+    // Re-render del panel de favoritos cuando:
+    //   - el usuario toca cualquier corazón (en esta u otra vista del sitio)
+    //   - llega la rehidratación del catálogo desde Supabase (lunabi:data-ready)
+    document.addEventListener('lunabi:favs-changed', () => {
+      renderFavoritos();
+      renderStats(user);
+    });
+    document.addEventListener('lunabi:data-ready', () => {
+      renderFavoritos();
+      renderOrders(user);
+      renderRutina(user);
+    });
   }
 
   window.initCuenta = initCuenta;

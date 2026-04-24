@@ -206,6 +206,24 @@
       if (nameEl)   nameEl.textContent   = user.nombre;
       if (emailEl)  emailEl.textContent  = user.email;
     }
+
+    // Mostrar el enlace "Panel de administrador" solo si la sesión es admin
+    const adminLink = document.getElementById('userMenuAdmin');
+    if (adminLink) adminLink.style.display = (user && user.is_admin) ? '' : 'none';
+
+    // Auto-rehidratación: si estamos en modo remoto y la sesión no tiene el
+    // flag is_admin (sesiones viejas), consultamos Supabase y lo completamos.
+    if (user && user.is_admin === undefined && isRemote() && window.LuApi && window.LuApi.getUser) {
+      window.LuApi.getUser().then(u => {
+        if (!u) return;
+        const s = getCurrentUser();
+        if (s) {
+          s.is_admin = !!u.is_admin;
+          setSession(s);
+          if (adminLink) adminLink.style.display = u.is_admin ? '' : 'none';
+        }
+      }).catch(() => {});
+    }
   }
 
   function toggleUserMenu(force) {
@@ -232,11 +250,46 @@
           showToast(`¡Hola de nuevo, ${session.nombre}!`, 'success');
         }
         form.reset();
-        afterAuthSuccess();
+
+        // Si la cuenta es admin (solo en modo remoto con Supabase), ofrecemos
+        // elegir rol; si no, seguimos con el flujo normal de usuario.
+        let isAdmin = false;
+        if (isRemote() && window.LuApi && window.LuApi.getUser) {
+          try {
+            const u = await window.LuApi.getUser();
+            isAdmin = !!(u && u.is_admin);
+            if (isAdmin) {
+              session.is_admin = true;
+              setSession(session);
+            }
+          } catch (e) { /* noop */ }
+        }
+        if (isAdmin) showRolePicker();
+        else afterAuthSuccess();
       } catch (ex) {
         if (err) err.textContent = ex.message;
       }
     });
+  }
+
+  function showRolePicker() {
+    closeAuthModal();
+    const modal = document.getElementById('rolePickerModal');
+    if (!modal || typeof bootstrap === 'undefined') {
+      // Fallback sin modal: pregunta con confirm()
+      const goAdmin = confirm('Tu cuenta es administradora. ¿Entrar al panel de admin?\n\nAceptar = Admin · Cancelar = Usuaria');
+      window.location.href = goAdmin ? 'admin.html' : 'cuenta.html';
+      return;
+    }
+    modal.querySelectorAll('[data-role]').forEach(btn => {
+      btn.onclick = () => {
+        const role = btn.getAttribute('data-role');
+        const inst = bootstrap.Modal.getInstance(modal);
+        if (inst) inst.hide();
+        window.location.href = (role === 'admin') ? 'admin.html' : 'cuenta.html';
+      };
+    });
+    bootstrap.Modal.getOrCreateInstance(modal).show();
   }
 
   function wireSignupForm() {

@@ -233,19 +233,58 @@ Los 3 tabs de la ficha de producto (`#productModal` y `producto.html`) tienen:
 - **5 canales** en cards con color de marca: Facebook (`#1877F2`), Messenger, WhatsApp, Instagram (gradient clásico), TikTok (fondo negro con glitch turquesa/rosa), correo (morado Lünabi).
 - **Footer** también lleva iconos WhatsApp, Instagram, Facebook, TikTok (el de WA abre el picker Huancayo/Nacional).
 
-## Backend (Supabase, opcional)
+## Backend (Supabase) — DESPLEGADO
 
-Ver [`supabase/README.md`](supabase/README.md) para el procedimiento completo. Resumen:
+El backend **ya está activo**. Proyecto Supabase "Lunabi" desplegado en `sa-east-1` (São Paulo, Perú-latency).
 
-1. Crear proyecto en supabase.com.
-2. SQL Editor → ejecutar [`supabase/schema.sql`](supabase/schema.sql) y después [`supabase/storage.sql`](supabase/storage.sql).
-3. Copiar `Project URL` + `anon key` a [`assets/js/supabase.config.js`](assets/js/supabase.config.js).
-4. `Ctrl+F5` — todos los módulos automáticamente empiezan a usar Supabase.
-5. Registrarse desde `registro.html` → en Supabase Table Editor marcar `is_admin = true` en la fila correspondiente de `profiles`.
+- **Project ID / ref**: `ukfbrkcxkxiwgpgitxvm`
+- **URL**: `https://ukfbrkcxkxiwgpgitxvm.supabase.co`
+- **Dashboard**: https://supabase.com/dashboard/project/ukfbrkcxkxiwgpgitxvm
+- **Plan**: Free ($0/mes)
+- **Organización**: Luis-Eduardo-2006's Org (`oaavbzqhnwsdvawzqyaw`)
+- **Credenciales**: ya cargadas en [`assets/js/supabase.config.js`](assets/js/supabase.config.js). `LuApi.isRemote()` devuelve `true` → todos los módulos hablan con Supabase.
+- **MCP de Supabase**: configurado en [`.mcp.json`](.mcp.json) — desde Claude Code se puede `execute_sql`, `apply_migration`, `get_advisors`, `list_projects`, `list_tables`, etc. para administrar el proyecto sin salir del editor.
 
-**Tablas**: `profiles` (extiende `auth.users`), `brands`, `products`, `hero_slides`, `orders`, `order_items`, `favorites`, `skintest_results`, `sales`, `site_settings`. Vista `v_products` con campos renombrados a camelCase (`tipoPiel`, `precioAntes`, etc.) para no refactorizar renderers. Función `record_sale(product_id, qty)` RPC pública con `security definer`. RLS: catálogo read público + write solo `is_admin()`; pedidos: user CRUD los suyos + admin todo; favoritos/skintest: solo dueño; ventas: read público, write vía RPC. Storage buckets `products/brands/slides` con read público y write admin.
+### Esquema aplicado
 
-Si `supabase.config.js` tiene url+anonKey vacíos, todo vuelve a correr en modo localStorage sin errores.
+**Tablas** (10, todas con RLS activo): `profiles` (extiende `auth.users`), `brands`, `products`, `hero_slides`, `orders`, `order_items`, `favorites`, `skintest_results`, `sales`, `site_settings`.
+
+**Vista `v_products`** — renombra columnas a camelCase (`tipoPiel`, `precioAntes`, `modoDeUso`, `masVendido`, `enOferta`) + join con `sales` para exponer `ventas`. Declarada `security_invoker = true` para respetar RLS del caller (no bypass). Los renderers del frontend consumen esta vista sin cambios.
+
+**Funciones**:
+- `public.is_admin()` — helper stable security-definer, lee `profiles.is_admin` del caller. Usado en RLS.
+- `public.handle_new_user()` + trigger `on_auth_user_created` — al crear fila en `auth.users`, auto-inserta su `profiles` con `email`, `nombre` (`raw_user_meta_data->>'nombre'`), `is_admin=false`.
+- `public.record_sale(p_product_id bigint, p_qty int)` — RPC `security definer`. Upsert sobre `sales`: si el producto ya tiene fila, suma el qty; si no, la crea. Llamado por el cliente tras cada pedido WA.
+
+**Tipos enum**: `order_status` (pendiente/confirmado/enviado/entregado/cancelado), `shipment_stage` (confirmado/preparacion/internacional/aduana/nacional/entregado).
+
+**Políticas RLS clave**:
+- `profiles`: read = self o admin; update = solo self.
+- `brands`, `products`, `hero_slides`, `site_settings`: read público; write solo `is_admin()`.
+- `orders`: read = self o admin; insert = user_id null o self; update = self o admin; delete = solo admin.
+- `order_items`: permiso vía `orders` (si puedes leer/escribir el order parent, idem los items).
+- `favorites`, `skintest_results`: CRUD solo del `auth.uid() = user_id`.
+- `sales`: read público; write directa solo admin (el flujo normal pasa por el RPC `record_sale`).
+
+**Storage**:
+- Buckets públicos: `products`, `brands`, `slides`. Los 3 tienen `public = true` → se pueden consumir vía URL directa.
+- Escritura restringida: policy `admin_write_<bucket>` en `storage.objects` permite `INSERT/UPDATE/DELETE` solo si `public.is_admin()`.
+- **No hay policy de SELECT amplia** (el bucket público ya permite GETs por URL sin necesidad de listar). Esto cierra el advisor `public_bucket_allows_listing`.
+
+### Semilla inicial
+
+`site_settings.wa_numbers` ya sembrado con los dos WhatsApp (Huancayo + Nacional, placeholders `51XXXXXXXXX`/`51YYYYYYYYY`). El resto de tablas (`brands`, `products`, `hero_slides`) están vacías al momento del despliegue — el sitio se verá sin productos hasta sembrarlo desde el admin panel o con un INSERT masivo.
+
+### Primer admin
+
+Como no se puede crear un admin con un JWT anónimo (las policies impiden editar `profiles.is_admin`), el flujo es:
+
+1. Registrarse desde [`registro.html`](registro.html) con tu correo.
+2. En el Table Editor de Supabase → tabla `profiles` → marcar `is_admin = true` en tu fila. O vía SQL desde el MCP: `UPDATE profiles SET is_admin = true WHERE email = 'tu@email.com';`.
+
+### Cómo volver a modo offline
+
+Dejar `url` y `anonKey` vacíos en [`supabase.config.js`](assets/js/supabase.config.js) y recargar. `LuApi.isRemote()` devolverá `false` y todos los módulos vuelven a leer/escribir localStorage sin tocar nada más del código.
 
 ## Design system (CSS tokens)
 

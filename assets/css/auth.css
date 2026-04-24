@@ -163,6 +163,30 @@ body.dark .user-menu-item:hover {
 }
 .user-menu-item i { font-size: 1.05rem; }
 
+/* Item especial para admins — acceso al panel */
+.user-menu-item-admin {
+  background: linear-gradient(135deg, rgba(104,42,191,0.10), rgba(247,198,249,0.16));
+  color: var(--p-purple-deep) !important;
+  font-weight: 600;
+  border: 1px solid rgba(104,42,191,0.18);
+  margin-bottom: 2px;
+}
+.user-menu-item-admin:hover {
+  background: linear-gradient(135deg, var(--p-purple-deep), var(--p-purple-vibrant)) !important;
+  color: #fff !important;
+  transform: translateX(3px);
+}
+.user-menu-item-admin i { color: currentColor; }
+body.dark .user-menu-item-admin {
+  background: linear-gradient(135deg, rgba(119,50,217,0.22), rgba(247,198,249,0.14));
+  color: var(--p-pink-soft) !important;
+  border-color: rgba(247,198,249,0.3);
+}
+body.dark .user-menu-item-admin:hover {
+  background: linear-gradient(135deg, var(--p-pink-soft), var(--p-lila-mid)) !important;
+  color: var(--p-purple-deep) !important;
+}
+
 /* ============================================================
  * Páginas dedicadas (login.html / registro.html)
  * Mismo diseño que el modal, pero en una card centrada dentro de

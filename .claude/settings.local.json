@@ -14,7 +14,9 @@
       "mcp__supabase__list_projects",
       "mcp__supabase__list_organizations",
       "mcp__supabase__get_cost",
-      "mcp__supabase__confirm_cost"
+      "mcp__supabase__confirm_cost",
+      "mcp__supabase__execute_sql",
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/scripts/scrape-yesstyle.js\")"
     ]
   }
 }

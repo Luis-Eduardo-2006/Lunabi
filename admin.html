@@ -93,70 +93,70 @@
 
               <!-- Primary KPI cards (colored) -->
               <div class="admin-stats-grid">
-                <div class="admin-stat stat-c1">
+                <button type="button" class="admin-stat stat-c1" data-detail="products" aria-label="Ver detalle de productos">
                   <div class="admin-stat-icon"><i class="bi bi-box-seam"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">Productos</span>
                     <span class="admin-stat-value" id="statProducts" data-count="0">0</span>
                     <span class="admin-stat-trend" id="statProductsTrend"></span>
                   </div>
-                </div>
-                <div class="admin-stat stat-c2">
+                </button>
+                <button type="button" class="admin-stat stat-c2" data-detail="brands" aria-label="Ver detalle de marcas">
                   <div class="admin-stat-icon"><i class="bi bi-tag"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">Marcas</span>
                     <span class="admin-stat-value" id="statBrands" data-count="0">0</span>
                     <span class="admin-stat-trend" id="statBrandsTrend"></span>
                   </div>
-                </div>
-                <div class="admin-stat stat-c3">
+                </button>
+                <button type="button" class="admin-stat stat-c3" data-detail="best" aria-label="Ver productos más vendidos">
                   <div class="admin-stat-icon"><i class="bi bi-star-fill"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">Más vendidos</span>
                     <span class="admin-stat-value" id="statBest" data-count="0">0</span>
                     <span class="admin-stat-trend" id="statBestPct"></span>
                   </div>
-                </div>
-                <div class="admin-stat stat-c4">
+                </button>
+                <button type="button" class="admin-stat stat-c4" data-detail="sale" aria-label="Ver productos en oferta">
                   <div class="admin-stat-icon"><i class="bi bi-percent"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">En oferta</span>
                     <span class="admin-stat-value" id="statSale" data-count="0">0</span>
                     <span class="admin-stat-trend" id="statSalePct"></span>
                   </div>
-                </div>
-                <div class="admin-stat stat-c5">
+                </button>
+                <button type="button" class="admin-stat stat-c5" data-detail="value" aria-label="Ver valor del catálogo">
                   <div class="admin-stat-icon"><i class="bi bi-cash-coin"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">Valor del catálogo</span>
                     <span class="admin-stat-value" id="statTotalValue" data-format="currency" data-count="0">S/ 0.00</span>
                     <span class="admin-stat-trend" id="statAvgPrice">S/ 0.00 promedio</span>
                   </div>
-                </div>
-                <div class="admin-stat stat-c6">
+                </button>
+                <button type="button" class="admin-stat stat-c6" data-detail="discount" aria-label="Ver descuentos del catálogo">
                   <div class="admin-stat-icon"><i class="bi bi-arrow-down-right-circle"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">Descuento total</span>
                     <span class="admin-stat-value" id="statDiscountValue" data-format="currency" data-count="0">S/ 0.00</span>
                     <span class="admin-stat-trend" id="statDiscountAvg"></span>
                   </div>
-                </div>
-                <div class="admin-stat stat-c7">
+                </button>
+                <button type="button" class="admin-stat stat-c7" data-detail="slides" aria-label="Ver diapositivas del carrusel">
                   <div class="admin-stat-icon"><i class="bi bi-images"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">Diapositivas</span>
                     <span class="admin-stat-value" id="statSlides" data-count="0">0</span>
                     <span class="admin-stat-trend" id="statSlidesHint"></span>
                   </div>
-                </div>
-                <div class="admin-stat stat-c8">
+                </button>
+                <button type="button" class="admin-stat stat-c8" data-detail="users" aria-label="Ver usuarios registrados">
                   <div class="admin-stat-icon"><i class="bi bi-people"></i></div>
                   <div class="admin-stat-body">
                     <span class="admin-stat-label">Usuarios</span>
                     <span class="admin-stat-value" id="statUsers" data-count="0">0</span>
                     <span class="admin-stat-trend">registrados</span>
                   </div>
-                </div>
+                </button>
               </div>
 
               <!-- Category + brand distribution -->
@@ -367,6 +367,180 @@
                   </label>
                 </div>
 
+                <fieldset class="admin-fieldset">
+                  <legend>Posición del texto y botón</legend>
+                  <small class="admin-hint-inline">Elige en qué zona del banner aparecen el título, la descripción y el botón.</small>
+                  <div class="admin-pos-picker" data-pos-picker>
+                    <input type="hidden" name="posH" value="center">
+                    <input type="hidden" name="posV" value="middle">
+                    <button type="button" class="admin-pos-cell" data-pos-h="left"   data-pos-v="top"    aria-label="Arriba izquierda"></button>
+                    <button type="button" class="admin-pos-cell" data-pos-h="center" data-pos-v="top"    aria-label="Arriba centro"></button>
+                    <button type="button" class="admin-pos-cell" data-pos-h="right"  data-pos-v="top"    aria-label="Arriba derecha"></button>
+                    <button type="button" class="admin-pos-cell" data-pos-h="left"   data-pos-v="middle" aria-label="Medio izquierda"></button>
+                    <button type="button" class="admin-pos-cell active" data-pos-h="center" data-pos-v="middle" aria-label="Centro"></button>
+                    <button type="button" class="admin-pos-cell" data-pos-h="right"  data-pos-v="middle" aria-label="Medio derecha"></button>
+                    <button type="button" class="admin-pos-cell" data-pos-h="left"   data-pos-v="bottom" aria-label="Abajo izquierda"></button>
+                    <button type="button" class="admin-pos-cell" data-pos-h="center" data-pos-v="bottom" aria-label="Abajo centro"></button>
+                    <button type="button" class="admin-pos-cell" data-pos-h="right"  data-pos-v="bottom" aria-label="Abajo derecha"></button>
+                  </div>
+                  <p class="admin-pos-label">Posición actual: <strong data-pos-readout>Centro</strong></p>
+                </fieldset>
+
+                <fieldset class="admin-fieldset">
+                  <legend>Estilos del texto y botón</legend>
+                  <small class="admin-hint-inline">Personaliza colores y fuentes. Si lo dejas vacío, usa el estilo por defecto del tema.</small>
+                  <div class="admin-grid-2">
+                    <label class="admin-field admin-field-color">
+                      <span>Color del título</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="tituloColor" value="#682abf">
+                        <input type="text" name="tituloColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="tituloColor" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Color de la descripción</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="descColor" value="#3a2a5c">
+                        <input type="text" name="descColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="descColor" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Color del botón (fondo)</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="botonBg" value="#682abf">
+                        <input type="text" name="botonBgHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="botonBg" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Color del texto del botón</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="botonColor" value="#ffffff">
+                        <input type="text" name="botonColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="botonColor" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Color del borde del botón</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="botonBorderColor" value="#682abf">
+                        <input type="text" name="botonBorderColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="botonBorderColor" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field">
+                      <span>Grosor del borde <small data-border-readout>0 px</small></span>
+                      <input type="range" name="botonBorderWidth" min="0" max="8" step="1" value="0" class="admin-range">
+                    </label>
+                    <label class="admin-field">
+                      <span>Forma del botón</span>
+                      <select name="botonRadius">
+                        <option value="default">Por defecto (pill suave)</option>
+                        <option value="square">Cuadrado (4 px)</option>
+                        <option value="rounded">Redondeado (14 px)</option>
+                        <option value="pill">Pill extremo (999 px)</option>
+                      </select>
+                    </label>
+                    <label class="admin-field">
+                      <span>Sombra del botón</span>
+                      <select name="botonShadow">
+                        <option value="default">Por defecto</option>
+                        <option value="none">Sin sombra</option>
+                        <option value="sm">Sutil</option>
+                        <option value="md">Media</option>
+                        <option value="lg">Intensa</option>
+                      </select>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Color de la sombra</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="botonShadowColor" value="#682abf">
+                        <input type="text" name="botonShadowColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="botonShadowColor" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field">
+                      <span>Efecto del borde</span>
+                      <select name="botonBorderEffect">
+                        <option value="none">Ninguno</option>
+                        <option value="halo">Halo giratorio (como el test)</option>
+                        <option value="glow">Resplandor pulsante</option>
+                        <option value="neon">Neón</option>
+                        <option value="double">Doble borde</option>
+                      </select>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Fondo de la etiqueta (badge)</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="badgeBg" value="#f6c6f9">
+                        <input type="text" name="badgeBgHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="badgeBg" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Texto de la etiqueta (badge)</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="badgeColor" value="#682abf">
+                        <input type="text" name="badgeColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="badgeColor" title="Usar color por defecto">
+                          <i class="bi bi-eraser"></i>
+                        </button>
+                      </div>
+                    </label>
+                    <label class="admin-field">
+                      <span>Fuente del título</span>
+                      <select name="fuenteTitulo">
+                        <option value="">Por defecto (elegante)</option>
+                        <option value="'Bodoni Moda', serif">Elegante — Bodoni Moda</option>
+                        <option value="'Syne', sans-serif">Moderna — Syne</option>
+                        <option value="'Epilogue', sans-serif">Limpia — Epilogue</option>
+                      </select>
+                    </label>
+                    <label class="admin-field">
+                      <span>Fuente de descripción y botón</span>
+                      <select name="fuenteTexto">
+                        <option value="">Por defecto (limpia)</option>
+                        <option value="'Epilogue', sans-serif">Limpia — Epilogue</option>
+                        <option value="'Syne', sans-serif">Moderna — Syne</option>
+                        <option value="'Bodoni Moda', serif">Elegante — Bodoni Moda</option>
+                      </select>
+                    </label>
+                  </div>
+                </fieldset>
+
+                <fieldset class="admin-fieldset admin-preview-fieldset">
+                  <legend><i class="bi bi-eye"></i> Vista previa en vivo</legend>
+                  <small class="admin-hint-inline">Así se verá en el carrusel de la tienda. Se actualiza a medida que editas.</small>
+                  <div class="admin-live-preview" id="slideLivePreview">
+                    <div class="admin-live-stage">
+                      <div class="admin-live-slide pos-h-center pos-v-middle" data-role="stage">
+                        <div class="admin-live-content" data-role="content">
+                          <span class="admin-live-badge" data-role="badge" hidden></span>
+                          <h2 class="admin-live-title" data-role="title">Tu título aquí</h2>
+                          <p class="admin-live-desc" data-role="desc">Tu descripción aparecerá aquí</p>
+                          <a class="admin-live-cta" data-role="cta">Botón</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+
                 <div class="admin-form-actions">
                   <button type="submit" class="admin-btn-primary"><i class="bi bi-check-lg"></i> Agregar al carrusel</button>
                   <button type="reset" class="admin-btn-secondary">Limpiar</button>
@@ -444,6 +618,37 @@
   <div id="carrito-drawer"></div>
   <div id="footer-container"></div>
   <div id="toast-container"></div>
+
+  <!-- ========== STAT DETAIL MODAL ========== -->
+  <div class="modal fade admin-stat-modal" id="statDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="admin-stat-modal-head">
+            <div class="admin-stat-modal-icon" id="statDetailIcon"><i class="bi bi-bar-chart-line"></i></div>
+            <div>
+              <h5 class="modal-title" id="statDetailTitle">Detalle</h5>
+              <p class="admin-stat-modal-sub" id="statDetailSub">—</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="admin-table-wrap">
+            <table class="admin-table admin-stat-detail-table" id="statDetailTable">
+              <thead><tr id="statDetailHead"></tr></thead>
+              <tbody id="statDetailBody"></tbody>
+            </table>
+          </div>
+          <p class="admin-empty" id="statDetailEmpty" hidden>Sin datos.</p>
+        </div>
+        <div class="modal-footer">
+          <span class="admin-stat-modal-count" id="statDetailCount">—</span>
+          <button type="button" class="admin-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ========== IMAGE EDITOR MODAL ========== -->
   <div class="modal fade admin-editor-modal" id="imageEditorModal" tabindex="-1" aria-hidden="true">

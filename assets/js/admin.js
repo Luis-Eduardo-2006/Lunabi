@@ -36,26 +36,71 @@
 
   /* Cuando hay backend, replicamos los cambios a Supabase después de los
    * escribimos localmente — así la tienda y el resto de usuarios los ven. */
-  function syncProduct(product, deleted) {
+  /* Cuando hay backend, replicamos los cambios a Supabase. Al crear (upsert
+   * por slug), el backend devuelve la fila con su id real; lo propagamos al
+   * objeto local para que editar/eliminar después funcione sin recargar. */
+  async function syncProduct(product, deleted) {
     if (!isRemote()) return;
-    const op = deleted
-      ? window.LuApi.adminDeleteProduct(product.id)
-      : window.LuApi.adminUpsertProduct(product);
-    op.catch(e => console.warn('[admin] sync producto', e));
+    try {
+      if (deleted) {
+        await window.LuApi.adminDeleteProduct(product.id);
+      } else {
+        const saved = await window.LuApi.adminUpsertProduct(product);
+        if (saved && typeof saved.id === 'number' && saved.id !== product.id) {
+          syncLocalId(window.products, product.id, saved.id);
+          syncLocalId(load(STORE_PRODUCTS), product.id, saved.id, STORE_PRODUCTS);
+          renderProductsTable();
+        }
+      }
+    } catch (e) { console.warn('[admin] sync producto', e); }
   }
-  function syncBrand(brand, deleted) {
+  async function syncBrand(brand, deleted) {
     if (!isRemote()) return;
-    const op = deleted
-      ? window.LuApi.adminDeleteBrand(brand.id)
-      : window.LuApi.adminUpsertBrand(brand);
-    op.catch(e => console.warn('[admin] sync marca', e));
+    try {
+      if (deleted) {
+        await window.LuApi.adminDeleteBrand(brand.id);
+      } else {
+        const saved = await window.LuApi.adminUpsertBrand(brand);
+        if (saved && typeof saved.id === 'number' && saved.id !== brand.id) {
+          syncLocalId(window.brands, brand.id, saved.id);
+          syncLocalId(load(STORE_BRANDS), brand.id, saved.id, STORE_BRANDS);
+          renderBrandsTable();
+        }
+      }
+    } catch (e) { console.warn('[admin] sync marca', e); }
   }
-  function syncSlide(slide, index, deleted) {
+  /* Actualiza el id local al que asignó Supabase, conservando el resto de
+   * los campos. Si el segundo arg es una key de localStorage, persiste. */
+  function syncLocalId(arr, oldId, newId, storeKey) {
+    if (!Array.isArray(arr)) return;
+    const idx = arr.findIndex(x => x && x.id === oldId);
+    if (idx > -1) arr[idx].id = newId;
+    if (storeKey) save(storeKey, arr);
+  }
+  /* Al editar un slide que ya vive en Supabase, hay que pasar su id real para
+   * que adminUpsertSlide haga UPDATE en vez de INSERT (si no, se duplica).
+   * Cuando es un INSERT nuevo, la respuesta trae el id → lo guardamos en el
+   * slide local para que la siguiente edición sí tenga id. */
+  async function syncSlide(slide, index, deleted) {
     if (!isRemote()) return;
-    const op = deleted
-      ? window.LuApi.adminDeleteSlide(index)
-      : window.LuApi.adminUpsertSlide(slide);
-    op.catch(e => console.warn('[admin] sync diapositiva', e));
+    try {
+      if (deleted) {
+        // slide trae el id si era remoto; si no, nada que borrar en el backend.
+        if (slide && slide.id) {
+          await window.LuApi.adminDeleteSlide({ id: slide.id, index });
+        }
+        return;
+      }
+      const saved = await window.LuApi.adminUpsertSlide(slide);
+      if (saved && saved.id && !slide.id) {
+        const slides = load(STORE_SLIDES);
+        if (slides[index]) {
+          slides[index].id = saved.id;
+          save(STORE_SLIDES, slides);
+          renderSlidesList();
+        }
+      }
+    } catch (e) { console.warn('[admin] sync diapositiva', e); }
   }
   function syncOrderStage(orderId, stageKey) {
     if (!isRemote()) return;
@@ -796,16 +841,27 @@
   }
 
   /* ---------- PRODUCTS: render table + submit ---------- */
-  function renderProductsTable() {
+  async function renderProductsTable() {
+    paintProductsFromMemory();
+    if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+      try {
+        const fresh = await window.LuApi.listProducts();
+        console.log('[admin] listProducts →', fresh && fresh.length);
+        if (Array.isArray(fresh)) {
+          (window.products || []).splice(0, (window.products || []).length, ...fresh);
+        }
+        paintProductsFromMemory();
+      } catch (e) { console.warn('[admin] listProducts failed', e); }
+    }
+  }
+  function paintProductsFromMemory() {
     const tbody = document.querySelector('#productsTable tbody');
     const countEl = document.getElementById('productsCount');
     if (!tbody) return;
-
     const adminProducts = load(STORE_PRODUCTS);
     const baseMax = window.__baseProductMaxId || 0;
     const all = window.products || [];
     if (countEl) countEl.textContent = all.length;
-
     tbody.innerHTML = all.length ? all.map(p => {
       const b = (window.brands || []).find(br => br.slug === p.marca);
       const inAdmin = adminProducts.some(ap => ap.id === p.id);
@@ -824,9 +880,7 @@
           <td>S/ ${Number(p.precio).toFixed(2)}</td>
           <td class="admin-td-actions">
             <button class="admin-btn-icon admin-btn-edit" data-edit-product="${p.id}" aria-label="Editar"><i class="bi bi-pencil-square"></i></button>
-            ${inAdmin
-              ? `<button class="admin-btn-icon" data-delete-product="${p.id}" aria-label="${isNew ? 'Eliminar' : 'Revertir a original'}"><i class="bi bi-${isNew ? 'trash3' : 'arrow-counterclockwise'}"></i></button>`
-              : ''}
+            <button class="admin-btn-icon" data-delete-product="${p.id}" aria-label="Eliminar"><i class="bi bi-trash3"></i></button>
           </td>
         </tr>`;
     }).join('') : '<tr><td colspan="6" class="admin-empty">Aún no hay productos.</td></tr>';
@@ -1039,28 +1093,285 @@
   }
 
   /* ---------- SLIDES ---------- */
+  const POS_LABELS = {
+    'top-left': 'Arriba izquierda', 'top-center': 'Arriba centro', 'top-right': 'Arriba derecha',
+    'middle-left': 'Medio izquierda', 'middle-center': 'Centro', 'middle-right': 'Medio derecha',
+    'bottom-left': 'Abajo izquierda', 'bottom-center': 'Abajo centro', 'bottom-right': 'Abajo derecha'
+  };
+  function normalizePos(s) {
+    const h = ['left','center','right'].includes(s && s.posH) ? s.posH : 'center';
+    const v = ['top','middle','bottom'].includes(s && s.posV) ? s.posV : 'middle';
+    return { posH: h, posV: v };
+  }
+  function posLabel(s) {
+    const { posH, posV } = normalizePos(s);
+    return POS_LABELS[`${posV}-${posH}`] || 'Centro';
+  }
+
   function renderSlidesList() {
     const cont = document.getElementById('slidesList');
     if (!cont) return;
     const slides = load(STORE_SLIDES);
-    cont.innerHTML = slides.length ? slides.map((s, i) => `
+    const hex = /^#[0-9a-f]{6}$/i;
+    const okFonts = [`'Bodoni Moda', serif`, `'Syne', sans-serif`, `'Epilogue', sans-serif`];
+    const esc = v => String(v == null ? '' : v).replace(/"/g, '&quot;');
+    const pairs = ps => ps.filter(([, v]) => v).map(([k, v]) => `${k}:${esc(v)}`).join(';');
+    cont.innerHTML = slides.length ? slides.map((s, i) => {
+      const { posH, posV } = normalizePos(s);
+      const tc = hex.test(s.tituloColor || '') ? s.tituloColor : '';
+      const dc = hex.test(s.descColor   || '') ? s.descColor   : '';
+      const bb = hex.test(s.botonBg     || '') ? s.botonBg     : '';
+      const bc = hex.test(s.botonColor  || '') ? s.botonColor  : '';
+      const gb = hex.test(s.badgeBg     || '') ? s.badgeBg     : '';
+      const gc = hex.test(s.badgeColor  || '') ? s.badgeColor  : '';
+      const ft = okFonts.includes(s.fuenteTitulo) ? s.fuenteTitulo : '';
+      const fx = okFonts.includes(s.fuenteTexto)  ? s.fuenteTexto  : '';
+      const shCol = hex.test(s.botonShadowColor || '') ? s.botonShadowColor : '';
+      const bBorder = botonBorderCSS(s.botonBorderWidth, s.botonBorderColor);
+      const bRadius = BOTON_RADIUS_MAP[s.botonRadius] || '';
+      const bShadow = botonShadowCSS(s.botonShadow, shCol);
+      const fxName = ['halo','glow','neon','double'].includes(s.botonBorderEffect) ? s.botonBorderEffect : '';
+      const fxColor = shCol || (hex.test(s.botonBorderColor || '') ? s.botonBorderColor : '') || bb || '';
+      const titleStyle = pairs([['color', tc], ['font-family', ft]]);
+      const descStyle  = pairs([['color', dc], ['font-family', fx]]);
+      const ctaStyle   = pairs([
+        ['background', bb], ['color', bc], ['font-family', fx],
+        ['border', bBorder], ['border-radius', bRadius], ['box-shadow', bShadow],
+        ['--lu-fx-color', fxColor]
+      ]);
+      const ctaClass = `admin-slide-cta${fxName ? ` fx-${fxName}` : ''}`;
+      const badgeStyle = pairs([['background', gb], ['color', gc]]);
+      return `
       <div class="admin-slide-card">
-        <div class="admin-slide-preview" style="background-image:url('${(s.imagen || '').replace(/'/g, "%27")}')">
-          ${s.badge ? `<span class="admin-slide-badge">${s.badge}</span>` : ''}
+        <div class="admin-slide-preview pos-h-${posH} pos-v-${posV}" style="background-image:url('${(s.imagen || '').replace(/'/g, "%27")}')">
+          ${s.badge ? `<span class="admin-slide-badge"${badgeStyle ? ` style="${badgeStyle}"` : ''}>${s.badge}</span>` : ''}
           <div class="admin-slide-content">
-            <h4>${s.titulo || ''}</h4>
-            <p>${s.descripcion || ''}</p>
-            <span class="admin-slide-cta">${s.botonTexto || 'Ver más'} →</span>
+            <h4${titleStyle ? ` style="${titleStyle}"` : ''}>${s.titulo || ''}</h4>
+            <p${descStyle ? ` style="${descStyle}"` : ''}>${s.descripcion || ''}</p>
+            <span class="${ctaClass}"${ctaStyle ? ` style="${ctaStyle}"` : ''}>${s.botonTexto || 'Ver más'} →</span>
           </div>
         </div>
         <div class="admin-slide-meta">
-          <span class="admin-hint">→ ${s.botonLink || '#'}</span>
+          <span class="admin-hint"><i class="bi bi-arrows-move"></i> ${posLabel(s)} &middot; → ${s.botonLink || '#'}</span>
           <div class="admin-td-actions">
             <button class="admin-btn-icon admin-btn-edit" data-edit-slide="${i}" aria-label="Editar"><i class="bi bi-pencil-square"></i></button>
             <button class="admin-btn-icon" data-delete-slide="${i}" aria-label="Eliminar"><i class="bi bi-trash3"></i></button>
           </div>
         </div>
-      </div>`).join('') : '<p class="admin-empty">No hay diapositivas personalizadas. La home usará el carrusel por defecto.</p>';
+      </div>`;
+    }).join('') : '<p class="admin-empty">No hay diapositivas personalizadas. La home usará el carrusel por defecto.</p>';
+  }
+
+  /* ---- Color inputs — picker + hex text + botón clear ----
+   * El hex text es la fuente de verdad. Vacío = usar color por defecto del
+   * tema. Al tocar el color picker se rellena el hex; al clic en clear se
+   * vacía. Esto permite distinguir "usuario eligió color X" de "no tocado". */
+  const HEX_RE = /^#[0-9a-f]{6}$/i;
+  /* Paleta de swatches populares — un click aplica el color al instante,
+   * sin tener que abrir el selector nativo del sistema. */
+  const COLOR_SWATCHES = [
+    '#682abf', '#7732d9', '#e53e6b', '#f6c6f9',
+    '#2fae8e', '#f5c06e', '#1a0f2e', '#ffffff'
+  ];
+  function initColorInputs(form) {
+    form.querySelectorAll('.admin-color-input').forEach(wrap => {
+      const picker = wrap.querySelector('input[type="color"]');
+      const text   = wrap.querySelector('input[type="text"]');
+      const clear  = wrap.querySelector('[data-clear]');
+      if (!picker || !text) return;
+      const sync = () => wrap.classList.toggle('has-value', !!text.value);
+      const apply = (v) => {
+        if (!HEX_RE.test(v)) return;
+        text.value = v;
+        picker.value = v;
+        sync();
+        form.dispatchEvent(new Event('lu-live', { bubbles: true }));
+      };
+      const handlePicker = () => {
+        text.value = picker.value;
+        sync();
+        form.dispatchEvent(new Event('lu-live', { bubbles: true }));
+      };
+      picker.addEventListener('input', handlePicker);
+      picker.addEventListener('change', handlePicker);
+      text.addEventListener('input', () => {
+        if (HEX_RE.test(text.value)) picker.value = text.value;
+        sync();
+        form.dispatchEvent(new Event('lu-live', { bubbles: true }));
+      });
+      if (clear) clear.addEventListener('click', () => {
+        text.value = '';
+        sync();
+        form.dispatchEvent(new Event('lu-live', { bubbles: true }));
+      });
+      // Inyecta la paleta de swatches debajo del picker
+      if (!wrap.parentElement.querySelector('.admin-color-swatches')) {
+        const strip = document.createElement('div');
+        strip.className = 'admin-color-swatches';
+        strip.innerHTML = COLOR_SWATCHES.map(c =>
+          `<button type="button" class="admin-swatch" data-swatch="${c}" style="background:${c}" aria-label="Color ${c}" title="${c}"></button>`
+        ).join('');
+        wrap.after(strip);
+        strip.addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-swatch]');
+          if (b) apply(b.dataset.swatch);
+        });
+      }
+      sync();
+    });
+  }
+  function readColorVal(form, name) {
+    const el = form.querySelector(`input[name="${name}Hex"]`);
+    if (!el) return '';
+    const v = (el.value || '').trim();
+    return HEX_RE.test(v) ? v : '';
+  }
+  function writeColorVal(form, name, value) {
+    const wrap = form.querySelector(`[data-clear="${name}"]`)?.closest('.admin-color-input');
+    if (!wrap) return;
+    const picker = wrap.querySelector('input[type="color"]');
+    const text   = wrap.querySelector('input[type="text"]');
+    const v = HEX_RE.test(value || '') ? value : '';
+    if (text) text.value = v;
+    if (picker && v) picker.value = v;
+    wrap.classList.toggle('has-value', !!v);
+  }
+
+  /* ---- Helpers de estilo del botón ----
+   * Mismo mapping que usa main.js para el render real — mantener en sincronía
+   * garantiza que el preview y el carrusel final se vean idénticos. */
+  const BOTON_RADIUS_MAP = {
+    default: '', square: '4px', rounded: '14px', pill: '999px'
+  };
+  const BOTON_SHADOW_SPEC = {
+    default: null,
+    none:    { offset: null },
+    sm: { offset: '0 2px 6px',   alpha: 0.28, fallback: 'rgba(0,0,0,0.12)' },
+    md: { offset: '0 6px 20px',  alpha: 0.42, fallback: 'rgba(104,42,191,0.28)' },
+    lg: { offset: '0 14px 34px', alpha: 0.55, fallback: 'rgba(104,42,191,0.40)' }
+  };
+  function hexToRgba(hex, alpha) {
+    if (!HEX_RE.test(hex || '')) return '';
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  function botonShadowCSS(size, color) {
+    const spec = BOTON_SHADOW_SPEC[size];
+    if (!spec) return '';
+    if (!spec.offset) return 'none';
+    const rgba = hexToRgba(color, spec.alpha) || spec.fallback;
+    return `${spec.offset} ${rgba}`;
+  }
+  function botonBorderCSS(width, color) {
+    const w = Math.max(0, Math.min(8, Number(width) || 0));
+    if (w <= 0) return '';
+    return HEX_RE.test(color || '') ? `${w}px solid ${color}` : '';
+  }
+
+  /* ---- Live preview del slide ---- */
+  function initLivePreview(form) {
+    const root = document.getElementById('slideLivePreview');
+    if (!root) return () => {};
+    const stage = root.querySelector('[data-role="stage"]');
+    const content = root.querySelector('[data-role="content"]');
+    const badge = root.querySelector('[data-role="badge"]');
+    const title = root.querySelector('[data-role="title"]');
+    const desc  = root.querySelector('[data-role="desc"]');
+    const cta   = root.querySelector('[data-role="cta"]');
+
+    function update() {
+      const fd = new FormData(form);
+      const imagen = (fd.get('imagen') || '').trim();
+      const bg = imagen ? `url('${imagen.replace(/'/g,"%27")}')` : '';
+      if (bg) {
+        stage.style.backgroundImage = bg;
+        stage.classList.add('has-img');
+      } else {
+        stage.style.backgroundImage = '';
+        stage.classList.remove('has-img');
+      }
+      // Posición
+      stage.classList.remove('pos-h-left','pos-h-center','pos-h-right','pos-v-top','pos-v-middle','pos-v-bottom');
+      const posH = ['left','center','right'].includes(fd.get('posH')) ? fd.get('posH') : 'center';
+      const posV = ['top','middle','bottom'].includes(fd.get('posV')) ? fd.get('posV') : 'middle';
+      stage.classList.add(`pos-h-${posH}`, `pos-v-${posV}`);
+      // Badge
+      const badgeTxt = (fd.get('badge') || '').trim();
+      if (badgeTxt) { badge.textContent = badgeTxt; badge.hidden = false; }
+      else { badge.hidden = true; }
+      // Textos
+      title.textContent = (fd.get('titulo') || '').trim() || 'Tu título aquí';
+      desc.textContent  = (fd.get('descripcion') || '').trim() || 'Tu descripción aparecerá aquí';
+      cta.textContent   = (fd.get('botonTexto') || '').trim() || 'Botón';
+      // Colores
+      const tc = readColorVal(form, 'tituloColor');
+      const dc = readColorVal(form, 'descColor');
+      const bb = readColorVal(form, 'botonBg');
+      const bc = readColorVal(form, 'botonColor');
+      const gb = readColorVal(form, 'badgeBg');
+      const gc = readColorVal(form, 'badgeColor');
+      title.style.color = tc || '';
+      desc.style.color  = dc || '';
+      cta.style.background = bb || '';
+      cta.style.color = bc || '';
+      badge.style.background = gb || '';
+      badge.style.color = gc || '';
+      // Borde, forma y sombra del botón
+      const bWidth = fd.get('botonBorderWidth') || 0;
+      const bColor = readColorVal(form, 'botonBorderColor');
+      const shColor = readColorVal(form, 'botonShadowColor');
+      cta.style.border = botonBorderCSS(bWidth, bColor) || '';
+      cta.style.borderRadius = BOTON_RADIUS_MAP[fd.get('botonRadius')] || '';
+      cta.style.boxShadow = botonShadowCSS(fd.get('botonShadow'), shColor) || '';
+      const bReadout = form.querySelector('[data-border-readout]');
+      if (bReadout) bReadout.textContent = `${Number(bWidth) || 0} px`;
+      // Efecto de borde — aplica clase fx-* y variable CSS con el color de FX
+      cta.classList.remove('fx-halo','fx-glow','fx-neon','fx-double');
+      const fxName = fd.get('botonBorderEffect') || 'none';
+      if (fxName !== 'none') cta.classList.add(`fx-${fxName}`);
+      const fxColor = shColor || bColor || readColorVal(form, 'botonBg') || '';
+      cta.style.setProperty('--lu-fx-color', fxColor || '');
+      // Fuentes
+      const ft = fd.get('fuenteTitulo') || '';
+      const fxFont = fd.get('fuenteTexto') || '';
+      title.style.fontFamily = ft;
+      desc.style.fontFamily  = fxFont;
+      cta.style.fontFamily   = fxFont;
+    }
+
+    form.addEventListener('input', update);
+    form.addEventListener('change', update);
+    form.addEventListener('lu-live', update);
+    update();
+    return update;
+  }
+
+  /* Wire up del picker 3x3 de posición. Devuelve helpers para setearlo
+   * desde edit mode y leerlo desde el submit. */
+  function initPosPicker(form) {
+    const wrap = form.querySelector('[data-pos-picker]');
+    if (!wrap) return null;
+    const hInput = wrap.querySelector('input[name="posH"]');
+    const vInput = wrap.querySelector('input[name="posV"]');
+    const readout = form.querySelector('[data-pos-readout]');
+    const cells = wrap.querySelectorAll('.admin-pos-cell');
+
+    function apply(posH, posV) {
+      const h = ['left','center','right'].includes(posH) ? posH : 'center';
+      const v = ['top','middle','bottom'].includes(posV) ? posV : 'middle';
+      hInput.value = h;
+      vInput.value = v;
+      cells.forEach(c => c.classList.toggle('active',
+        c.dataset.posH === h && c.dataset.posV === v));
+      if (readout) readout.textContent = POS_LABELS[`${v}-${h}`] || 'Centro';
+      // Notifica al live preview para que se re-renderice
+      form.dispatchEvent(new Event('lu-live', { bubbles: true }));
+    }
+    cells.forEach(c => c.addEventListener('click', () => apply(c.dataset.posH, c.dataset.posV)));
+
+    return { apply, reset: () => apply('center', 'middle') };
   }
 
   let editingSlideIdx = null;
@@ -1069,6 +1380,23 @@
     const form = document.getElementById('slideForm');
     if (!form) return;
     form.querySelectorAll('.admin-image-input').forEach(wireImageInput);
+    initColorInputs(form);
+    const posPicker = initPosPicker(form);
+    const refreshPreview = initLivePreview(form);
+
+    // Botón "Limpiar" nativo → garantizar que colores/posición/preview vuelvan
+    // a su estado por defecto (form.reset() no toca el has-value custom).
+    form.addEventListener('reset', () => {
+      setTimeout(() => {
+        ['tituloColor','descColor','botonBg','botonColor','badgeBg','badgeColor','botonBorderColor','botonShadowColor'].forEach(n => writeColorVal(form, n, ''));
+        if (posPicker) posPicker.reset();
+        form.querySelectorAll('.admin-image-input').forEach(c => {
+          const u = c.querySelector('input[type="text"], input[type="url"]');
+          if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        if (refreshPreview) refreshPreview();
+      }, 0);
+    });
 
     const submitBtn = form.querySelector('button[type="submit"]');
     const resetBtn  = form.querySelector('button[type="reset"]');
@@ -1101,6 +1429,31 @@
         const u = c.querySelector('input[type="text"], input[type="url"]');
         if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
       });
+      if (posPicker) {
+        const { posH, posV } = normalizePos(s);
+        posPicker.apply(posH, posV);
+      }
+      writeColorVal(form, 'tituloColor', s.tituloColor || '');
+      writeColorVal(form, 'descColor',   s.descColor   || '');
+      writeColorVal(form, 'botonBg',     s.botonBg     || '');
+      writeColorVal(form, 'botonColor',  s.botonColor  || '');
+      writeColorVal(form, 'badgeBg',     s.badgeBg     || '');
+      writeColorVal(form, 'badgeColor',  s.badgeColor  || '');
+      writeColorVal(form, 'botonBorderColor', s.botonBorderColor || '');
+      writeColorVal(form, 'botonShadowColor', s.botonShadowColor || '');
+      const bwInput = form.querySelector('[name="botonBorderWidth"]');
+      if (bwInput) bwInput.value = Number(s.botonBorderWidth) || 0;
+      const brSel = form.querySelector('[name="botonRadius"]');
+      if (brSel) brSel.value = s.botonRadius || 'default';
+      const bsSel = form.querySelector('[name="botonShadow"]');
+      if (bsSel) bsSel.value = s.botonShadow || 'default';
+      const beSel = form.querySelector('[name="botonBorderEffect"]');
+      if (beSel) beSel.value = s.botonBorderEffect || 'none';
+      const ftSel = form.querySelector('[name="fuenteTitulo"]');
+      const fxSel = form.querySelector('[name="fuenteTexto"]');
+      if (ftSel) ftSel.value = s.fuenteTitulo || '';
+      if (fxSel) fxSel.value = s.fuenteTexto  || '';
+      if (refreshPreview) refreshPreview();
       if (formTitle) formTitle.innerHTML = `<i class="bi bi-pencil-square"></i> Editando diapositiva <span class="admin-tag-custom">#${i + 1}</span>`;
       if (submitBtn) submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Actualizar diapositiva';
       cancelEditBtn.style.display = '';
@@ -1114,6 +1467,21 @@
         const u = c.querySelector('input[type="text"], input[type="url"]');
         if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
       });
+      if (posPicker) posPicker.reset();
+      ['tituloColor','descColor','botonBg','botonColor','badgeBg','badgeColor','botonBorderColor','botonShadowColor'].forEach(n => writeColorVal(form, n, ''));
+      const bwInput = form.querySelector('[name="botonBorderWidth"]');
+      if (bwInput) bwInput.value = 0;
+      const brSel = form.querySelector('[name="botonRadius"]');
+      if (brSel) brSel.value = 'default';
+      const bsSel = form.querySelector('[name="botonShadow"]');
+      if (bsSel) bsSel.value = 'default';
+      const beSel = form.querySelector('[name="botonBorderEffect"]');
+      if (beSel) beSel.value = 'none';
+      const ftSel = form.querySelector('[name="fuenteTitulo"]');
+      const fxSel = form.querySelector('[name="fuenteTexto"]');
+      if (ftSel) ftSel.value = '';
+      if (fxSel) fxSel.value = '';
+      if (refreshPreview) refreshPreview();
       if (formTitle) formTitle.innerHTML = originalTitle;
       if (submitBtn) submitBtn.innerHTML = originalSubmit;
       cancelEditBtn.style.display = 'none';
@@ -1124,13 +1492,30 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const fd = new FormData(form);
+      const posH = ['left','center','right'].includes(fd.get('posH')) ? fd.get('posH') : 'center';
+      const posV = ['top','middle','bottom'].includes(fd.get('posV')) ? fd.get('posV') : 'middle';
       const slide = {
         imagen:      (fd.get('imagen') || '').trim(),
         titulo:      (fd.get('titulo') || '').trim(),
         descripcion: (fd.get('descripcion') || '').trim(),
         botonTexto:  (fd.get('botonTexto') || '').trim(),
         botonLink:   (fd.get('botonLink') || '').trim(),
-        badge:       (fd.get('badge') || '').trim()
+        badge:       (fd.get('badge') || '').trim(),
+        posH, posV,
+        tituloColor:  readColorVal(form, 'tituloColor'),
+        descColor:    readColorVal(form, 'descColor'),
+        botonBg:      readColorVal(form, 'botonBg'),
+        botonColor:   readColorVal(form, 'botonColor'),
+        botonBorderColor: readColorVal(form, 'botonBorderColor'),
+        botonBorderWidth: Math.max(0, Math.min(8, Number(fd.get('botonBorderWidth')) || 0)),
+        botonRadius:  ['default','square','rounded','pill'].includes(fd.get('botonRadius')) ? fd.get('botonRadius') : 'default',
+        botonShadow:  ['default','none','sm','md','lg'].includes(fd.get('botonShadow')) ? fd.get('botonShadow') : 'default',
+        botonShadowColor: readColorVal(form, 'botonShadowColor'),
+        botonBorderEffect: ['none','halo','glow','double','neon'].includes(fd.get('botonBorderEffect')) ? fd.get('botonBorderEffect') : 'none',
+        badgeBg:      readColorVal(form, 'badgeBg'),
+        badgeColor:   readColorVal(form, 'badgeColor'),
+        fuenteTitulo: (fd.get('fuenteTitulo') || '').trim(),
+        fuenteTexto:  (fd.get('fuenteTexto')  || '').trim()
       };
       if (!slide.imagen || !slide.titulo || !slide.descripcion || !slide.botonTexto || !slide.botonLink) {
         if (window.showToast) window.showToast('Completa los campos obligatorios', 'info');
@@ -1138,6 +1523,10 @@
       }
       const slides = load(STORE_SLIDES);
       if (editingSlideIdx != null) {
+        // Preserva el id remoto del slide anterior — sin él Supabase haría
+        // INSERT en vez de UPDATE y la diapositiva se duplicaría.
+        const prev = slides[editingSlideIdx] || {};
+        if (prev.id) slide.id = prev.id;
         slides[editingSlideIdx] = slide;
         save(STORE_SLIDES, slides);
         syncSlide(slide, editingSlideIdx, false);
@@ -1154,6 +1543,17 @@
           const u = c.querySelector('input[type="text"], input[type="url"]');
           if (u) u.dispatchEvent(new Event('input', { bubbles: true }));
         });
+        if (posPicker) posPicker.reset();
+        ['tituloColor','descColor','botonBg','botonColor','badgeBg','badgeColor','botonBorderColor','botonShadowColor'].forEach(n => writeColorVal(form, n, ''));
+        const bwInput2 = form.querySelector('[name="botonBorderWidth"]');
+        if (bwInput2) bwInput2.value = 0;
+        const brSel2 = form.querySelector('[name="botonRadius"]');
+        if (brSel2) brSel2.value = 'default';
+        const bsSel2 = form.querySelector('[name="botonShadow"]');
+        if (bsSel2) bsSel2.value = 'default';
+        const beSel2 = form.querySelector('[name="botonBorderEffect"]');
+        if (beSel2) beSel2.value = 'none';
+        if (refreshPreview) refreshPreview();
         renderSlidesList();
         renderDashboard();
         if (window.showToast) window.showToast('Diapositiva añadida', 'success');
@@ -1172,9 +1572,11 @@
       if (!delBtn) return;
       const i = Number(delBtn.dataset.deleteSlide);
       const slides = load(STORE_SLIDES);
+      const removed = slides[i];
       slides.splice(i, 1);
       save(STORE_SLIDES, slides);
-      syncSlide(null, i, true);
+      // Pasamos el slide eliminado (con su id remoto) para borrarlo en Supabase.
+      syncSlide(removed, i, true);
       if (editingSlideIdx === i) exitEditMode();
       renderSlidesList();
       renderDashboard();
@@ -1192,7 +1594,39 @@
   }
 
   /* ---------- BRANDS ---------- */
-  function renderBrandsTable() {
+  /* Renderiza la tabla de marcas. Si estamos en modo remoto, SIEMPRE pide
+   * fresh a Supabase — así no dependemos del timing de la rehidratación
+   * inicial. Paint optimista primero con lo local, luego actualizamos. */
+  async function renderBrandsTable() {
+    const tbody = document.querySelector('#brandsTable tbody');
+    if (!tbody) return;
+
+    // Paint optimista con lo que hay en memoria
+    paintBrandsFromMemory();
+
+    // Si hay backend, refresca y re-pinta con la fuente de verdad
+    if (window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote()) {
+      try {
+        const fresh = await window.LuApi.listBrands();
+        console.log('[admin] listBrands →', fresh && fresh.length, 'marcas');
+        if (Array.isArray(fresh)) {
+          (window.brands || []).splice(0, (window.brands || []).length, ...fresh);
+        }
+        paintBrandsFromMemory();
+        // También refresca el select de marcas en el form de productos
+        const psel = document.querySelector('#productForm [name="marca"]');
+        if (psel) {
+          const current = psel.value;
+          psel.innerHTML = buildBrandOptions();
+          if (current) psel.value = current;
+        }
+      } catch (e) {
+        console.warn('[admin] listBrands failed', e);
+      }
+    }
+  }
+
+  function paintBrandsFromMemory() {
     const tbody = document.querySelector('#brandsTable tbody');
     const countEl = document.getElementById('brandsCount');
     if (!tbody) return;
@@ -1215,9 +1649,7 @@
           <td><code>${b.slug}</code></td>
           <td class="admin-td-actions">
             <button class="admin-btn-icon admin-btn-edit" data-edit-brand="${b.id}" aria-label="Editar"><i class="bi bi-pencil-square"></i></button>
-            ${inAdmin
-              ? `<button class="admin-btn-icon" data-delete-brand="${b.id}" aria-label="${isNew ? 'Eliminar' : 'Revertir a original'}"><i class="bi bi-${isNew ? 'trash3' : 'arrow-counterclockwise'}"></i></button>`
-              : ''}
+            <button class="admin-btn-icon" data-delete-brand="${b.id}" aria-label="Eliminar"><i class="bi bi-trash3"></i></button>
           </td>
         </tr>`;
     }).join('') : '<tr><td colspan="4" class="admin-empty">Sin marcas.</td></tr>';
@@ -1607,18 +2039,335 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* Re-renderiza TODO lo que dependa de window.products / window.brands. */
+  function refreshAllAdminViews() {
+    renderDashboard();
+    renderProductsTable();
+    renderBrandsTable();
+    renderSlidesList();
+    renderAdminOrders();
+    const psel = document.querySelector('#productForm [name="marca"]');
+    if (psel) {
+      const current = psel.value;
+      psel.innerHTML = buildBrandOptions();
+      if (current) psel.value = current;
+    }
+  }
+
+  /* Fetch directo desde Supabase — no depende del evento data-ready ni del
+   * timing de data.js. Si hay backend, lo consulta explícitamente y pisa
+   * los arrays globales con la fuente de verdad. */
+  async function fetchFromBackend() {
+    if (!window.LuApi || !window.LuApi.isRemote || !window.LuApi.isRemote()) return;
+    try {
+      const [remoteBrands, remoteProducts, remoteSlides] = await Promise.all([
+        window.LuApi.listBrands(),
+        window.LuApi.listProducts(),
+        window.LuApi.listSlides()
+      ]);
+      if (Array.isArray(remoteBrands)) {
+        (window.brands || []).splice(0, (window.brands || []).length, ...remoteBrands);
+      }
+      if (Array.isArray(remoteProducts)) {
+        (window.products || []).splice(0, (window.products || []).length, ...remoteProducts);
+      }
+      // Guardamos slides en localStorage admin también (admin.js los lee de ahí)
+      if (Array.isArray(remoteSlides) && remoteSlides.length) {
+        try { localStorage.setItem('lunabi_admin_slides', JSON.stringify(remoteSlides)); } catch (e) {}
+      }
+      console.log('[admin] backend sync', {
+        brands:   remoteBrands.length,
+        products: remoteProducts.length,
+        slides:   remoteSlides.length
+      });
+      refreshAllAdminViews();
+    } catch (e) {
+      console.warn('[admin] fetchFromBackend failed', e);
+    }
+  }
+
+  /* ---------- STAT DETAIL MODAL ----------
+   * Cada KPI del dashboard abre el mismo modal con una tabla de detalle
+   * construida al vuelo según el tipo. Evita duplicar UI — una sola
+   * vista de tabla, 8 proyecciones distintas sobre los mismos datos. */
+  const STAT_DETAIL_CFG = {
+    products: {
+      title: 'Productos del catálogo',
+      sub: 'Todos los productos disponibles en la tienda.',
+      icon: 'bi-box-seam',
+      empty: 'Aún no hay productos cargados.',
+      build: () => {
+        const ps = [...(window.products || [])].sort((a, b) => b.id - a.id);
+        const bs = window.brands || [];
+        return {
+          head: ['', 'Nombre', 'Marca', 'Categoría', 'Precio', 'Estado'],
+          rows: ps.map(p => {
+            const b = bs.find(x => x.slug === p.marca);
+            const antes = Number(p.precioAntes) || 0;
+            const ahora = Number(p.precio) || 0;
+            const pct = antes > ahora && antes > 0 ? Math.round((antes - ahora) / antes * 100) : 0;
+            const pills = [];
+            if (p.masVendido) pills.push('<span class="admin-stat-pill warn">Viral</span>');
+            if (pct > 0) pills.push(`<span class="admin-stat-pill sale">-${pct}%</span>`);
+            else if (p.enOferta) pills.push('<span class="admin-stat-pill sale">Oferta</span>');
+            if (!pills.length) pills.push('<span class="admin-stat-pill">Activo</span>');
+            return [
+              `<img src="${(p.imagenes && p.imagenes[0]) || ''}" alt="" onerror="this.style.visibility='hidden'">`,
+              escapeHtml(p.nombre || ''),
+              escapeHtml(b ? b.nombre : (p.marca || '—')),
+              escapeHtml(p.categoria || '—') + (p.subcategoria ? ` · ${escapeHtml(p.subcategoria)}` : ''),
+              `S/ ${ahora.toFixed(2)}`,
+              pills.join(' ')
+            ];
+          })
+        };
+      }
+    },
+    brands: {
+      title: 'Marcas del catálogo',
+      sub: 'Cuántos productos aporta cada marca a la tienda.',
+      icon: 'bi-tag',
+      empty: 'Aún no hay marcas cargadas.',
+      build: () => {
+        const bs = window.brands || [];
+        const ps = window.products || [];
+        const count = (slug) => ps.filter(p => p.marca === slug).length;
+        const rows = bs.slice().sort((a, b) => count(b.slug) - count(a.slug));
+        return {
+          head: ['', 'Marca', 'Slug', 'Productos', 'Descripción'],
+          rows: rows.map(b => ([
+            b.logo ? `<img src="${b.logo}" alt="" onerror="this.style.visibility='hidden'">` : '',
+            escapeHtml(b.nombre || ''),
+            `<code>${escapeHtml(b.slug || '')}</code>`,
+            `<strong>${count(b.slug)}</strong>`,
+            escapeHtml((b.descripcion || '—').slice(0, 120))
+          ]))
+        };
+      }
+    },
+    best: {
+      title: 'Productos más vendidos',
+      sub: 'Destacados como "viral" en la tienda.',
+      icon: 'bi-star-fill',
+      empty: 'Aún no hay productos marcados como más vendidos.',
+      build: () => {
+        const ps = (window.products || []).filter(p => p.masVendido);
+        const bs = window.brands || [];
+        return {
+          head: ['', 'Nombre', 'Marca', 'Categoría', 'Precio'],
+          rows: ps.map(p => {
+            const b = bs.find(x => x.slug === p.marca);
+            return [
+              `<img src="${(p.imagenes && p.imagenes[0]) || ''}" alt="" onerror="this.style.visibility='hidden'">`,
+              escapeHtml(p.nombre || ''),
+              escapeHtml(b ? b.nombre : (p.marca || '—')),
+              escapeHtml(p.categoria || '—'),
+              `S/ ${Number(p.precio || 0).toFixed(2)}`
+            ];
+          })
+        };
+      }
+    },
+    sale: {
+      title: 'Productos en oferta',
+      sub: 'Productos con descuento activo o flag "enOferta".',
+      icon: 'bi-percent',
+      empty: 'Aún no hay productos en oferta.',
+      build: () => {
+        const ps = (window.products || []).filter(p =>
+          p.enOferta || (p.precioAntes && p.precioAntes > p.precio));
+        const bs = window.brands || [];
+        return {
+          head: ['', 'Nombre', 'Marca', 'Precio antes', 'Precio ahora', 'Descuento'],
+          rows: ps.map(p => {
+            const b = bs.find(x => x.slug === p.marca);
+            const antes = Number(p.precioAntes) || 0;
+            const ahora = Number(p.precio) || 0;
+            const pct = antes > 0 ? Math.round((antes - ahora) / antes * 100) : 0;
+            return [
+              `<img src="${(p.imagenes && p.imagenes[0]) || ''}" alt="" onerror="this.style.visibility='hidden'">`,
+              escapeHtml(p.nombre || ''),
+              escapeHtml(b ? b.nombre : (p.marca || '—')),
+              antes ? `<s>S/ ${antes.toFixed(2)}</s>` : '—',
+              `<strong>S/ ${ahora.toFixed(2)}</strong>`,
+              pct > 0 ? `<span class="admin-stat-pill sale">-${pct}%</span>` : '—'
+            ];
+          })
+        };
+      }
+    },
+    value: {
+      title: 'Valor del catálogo',
+      sub: 'Precio actual de cada producto — la suma es el valor total.',
+      icon: 'bi-cash-coin',
+      empty: 'Aún no hay productos cargados.',
+      build: () => {
+        const ps = [...(window.products || [])].sort((a, b) => (Number(b.precio) || 0) - (Number(a.precio) || 0));
+        const bs = window.brands || [];
+        const total = ps.reduce((s, p) => s + (Number(p.precio) || 0), 0);
+        return {
+          head: ['', 'Nombre', 'Marca', 'Precio', '% del total'],
+          rows: ps.map(p => {
+            const b = bs.find(x => x.slug === p.marca);
+            const v = Number(p.precio) || 0;
+            const pct = total > 0 ? (v / total * 100) : 0;
+            return [
+              `<img src="${(p.imagenes && p.imagenes[0]) || ''}" alt="" onerror="this.style.visibility='hidden'">`,
+              escapeHtml(p.nombre || ''),
+              escapeHtml(b ? b.nombre : (p.marca || '—')),
+              `S/ ${v.toFixed(2)}`,
+              `${pct.toFixed(1)}%`
+            ];
+          })
+        };
+      }
+    },
+    discount: {
+      title: 'Descuentos activos',
+      sub: 'Productos con precio anterior mayor al actual.',
+      icon: 'bi-arrow-down-right-circle',
+      empty: 'No hay descuentos activos.',
+      build: () => {
+        const ps = (window.products || []).filter(p => (Number(p.precioAntes) || 0) > (Number(p.precio) || 0));
+        const bs = window.brands || [];
+        const rows = ps.slice().sort((a, b) => {
+          const da = (Number(a.precioAntes) || 0) - (Number(a.precio) || 0);
+          const db = (Number(b.precioAntes) || 0) - (Number(b.precio) || 0);
+          return db - da;
+        });
+        return {
+          head: ['', 'Nombre', 'Antes', 'Ahora', 'Ahorro', '% off'],
+          rows: rows.map(p => {
+            const antes = Number(p.precioAntes) || 0;
+            const ahora = Number(p.precio) || 0;
+            const dif = antes - ahora;
+            const pct = antes > 0 ? Math.round(dif / antes * 100) : 0;
+            return [
+              `<img src="${(p.imagenes && p.imagenes[0]) || ''}" alt="" onerror="this.style.visibility='hidden'">`,
+              escapeHtml(p.nombre || ''),
+              `<s>S/ ${antes.toFixed(2)}</s>`,
+              `<strong>S/ ${ahora.toFixed(2)}</strong>`,
+              `<span class="admin-stat-pill ok">S/ ${dif.toFixed(2)}</span>`,
+              `<span class="admin-stat-pill sale">-${pct}%</span>`
+            ];
+          })
+        };
+      }
+    },
+    slides: {
+      title: 'Diapositivas del carrusel',
+      sub: 'Banners activos en el home de la tienda.',
+      icon: 'bi-images',
+      empty: 'Aún no hay diapositivas personalizadas (se muestra el carrusel por defecto).',
+      build: () => {
+        const slides = load(STORE_SLIDES);
+        return {
+          head: ['', 'Título', 'Descripción', 'Botón', 'Enlace', 'Badge'],
+          rows: slides.map(s => ([
+            s.imagen ? `<img src="${s.imagen}" alt="" onerror="this.style.visibility='hidden'">` : '',
+            escapeHtml(s.titulo || '—'),
+            escapeHtml((s.descripcion || '—').slice(0, 100)),
+            escapeHtml(s.botonTexto || '—'),
+            `<code>${escapeHtml(s.botonLink || '#')}</code>`,
+            s.badge ? `<span class="admin-stat-pill">${escapeHtml(s.badge)}</span>` : '—'
+          ]))
+        };
+      }
+    },
+    users: {
+      title: 'Usuarios registrados',
+      sub: 'Cuentas creadas en la tienda (locales).',
+      icon: 'bi-people',
+      empty: 'Aún no hay usuarios registrados.',
+      build: () => {
+        let users = [];
+        try { users = JSON.parse(localStorage.getItem('lunabi_users') || '[]'); }
+        catch (e) { users = []; }
+        return {
+          head: ['#', 'Nombre', 'Email', 'Registro'],
+          rows: (users || []).map((u, i) => ([
+            `<strong>${i + 1}</strong>`,
+            escapeHtml(u.nombre || '—'),
+            `<code>${escapeHtml(u.email || '—')}</code>`,
+            u.createdAt ? new Date(u.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+          ]))
+        };
+      }
+    }
+  };
+
+  function openStatDetail(type) {
+    const cfg = STAT_DETAIL_CFG[type];
+    const modalEl = document.getElementById('statDetailModal');
+    if (!cfg || !modalEl || !window.bootstrap) return;
+
+    const titleEl = document.getElementById('statDetailTitle');
+    const subEl = document.getElementById('statDetailSub');
+    const iconEl = document.getElementById('statDetailIcon');
+    const headEl = document.getElementById('statDetailHead');
+    const bodyEl = document.getElementById('statDetailBody');
+    const emptyEl = document.getElementById('statDetailEmpty');
+    const countEl = document.getElementById('statDetailCount');
+    const tableEl = document.getElementById('statDetailTable');
+
+    if (titleEl) titleEl.textContent = cfg.title;
+    if (subEl) subEl.textContent = cfg.sub;
+    if (iconEl) iconEl.innerHTML = `<i class="bi ${cfg.icon}"></i>`;
+
+    // Hereda el color del card clickeado para el icono del modal
+    const srcCard = document.querySelector(`.admin-stat[data-detail="${type}"]`);
+    if (iconEl && srcCard) {
+      const srcIcon = srcCard.querySelector('.admin-stat-icon');
+      if (srcIcon) iconEl.style.background = getComputedStyle(srcIcon).background;
+    }
+
+    const { head, rows } = cfg.build();
+    if (headEl) headEl.innerHTML = head.map(h => `<th>${h}</th>`).join('');
+    if (bodyEl) bodyEl.innerHTML = rows.map(r =>
+      `<tr>${r.map(c => `<td>${c == null ? '' : c}</td>`).join('')}</tr>`
+    ).join('');
+
+    const isEmpty = rows.length === 0;
+    if (tableEl) tableEl.hidden = isEmpty;
+    if (emptyEl) {
+      emptyEl.hidden = !isEmpty;
+      emptyEl.textContent = cfg.empty;
+    }
+    if (countEl) countEl.textContent = isEmpty ? '' : `${rows.length} ${rows.length === 1 ? 'registro' : 'registros'}`;
+
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  }
+
+  function initStatDetail() {
+    document.querySelectorAll('.admin-stat[data-detail]').forEach(el => {
+      el.addEventListener('click', () => openStatDetail(el.dataset.detail));
+    });
+  }
+
   /* ---------- INIT ---------- */
   function initAdmin() {
     if (!document.body || document.body.dataset.page !== 'admin') return;
     initTabs();
-    renderDashboard();
     initProductsForm();
-    renderProductsTable();
     initSlidesForm();
-    renderSlidesList();
     initBrandsForm();
-    renderBrandsTable();
-    renderAdminOrders();
+    initStatDetail();
+    refreshAllAdminViews();
+
+    // Consulta Supabase directamente (espera hasta 5s a que LuApi cargue)
+    let tries = 0;
+    const waitForApi = setInterval(() => {
+      tries++;
+      if (window.LuApi) {
+        clearInterval(waitForApi);
+        fetchFromBackend();
+      } else if (tries > 100) {
+        clearInterval(waitForApi);
+      }
+    }, 50);
+
+    // También escuchamos el evento por si data.js logra rehidratar antes
+    document.addEventListener('lunabi:data-ready', refreshAllAdminViews);
   }
 
   window.initAdmin = initAdmin;

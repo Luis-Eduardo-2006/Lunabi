@@ -1,0 +1,15 @@
+{
+  "name": "lunabi-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scripts locales para LÜNABI (scraper, importers). Entorno de pruebas.",
+  "scripts": {
+    "scrape": "node scrape-yesstyle.js",
+    "import": "node scrape-yesstyle.js --import"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "minimist": "^1.2.8",
+    "playwright": "^1.47.0"
+  }
+}

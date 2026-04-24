@@ -192,7 +192,9 @@ main, section, footer { position: relative; z-index: 1; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 2rem;
+  /* padding horizontal generoso para que las flechas de navegación nunca
+   * queden sobre el texto/botón. 56px (flecha) + 24px (margin) + aire = ~100px. */
+  padding: 2rem clamp(5rem, 9vw, 6.5rem);
   position: relative;
   overflow: hidden;
   transition: background 0.6s ease;
@@ -207,6 +209,16 @@ main, section, footer { position: relative; z-index: 1; }
 .hero-slide-1 { background: var(--p-beige-soft); }
 .hero-slide-2 { background: var(--p-lavender-light); }
 .hero-slide-3 { background: var(--p-gray-warm); }
+
+/* ---- Hero slide — posición del contenido (configurable desde admin) ---- */
+/* El padding horizontal ya reserva el espacio de las flechas en .hero-slide —
+ * aquí sólo ajustamos alineación. No volvemos a tocar padding-left/right. */
+.hero-slide.pos-h-left   { justify-content: flex-start; text-align: left; }
+.hero-slide.pos-h-center { justify-content: center;     text-align: center; }
+.hero-slide.pos-h-right  { justify-content: flex-end;   text-align: right; }
+.hero-slide.pos-v-top    { align-items: flex-start; padding-top: clamp(1.2rem, 3.5vw, 2.2rem); }
+.hero-slide.pos-v-middle { align-items: center; }
+.hero-slide.pos-v-bottom { align-items: flex-end; padding-bottom: clamp(1.2rem, 3.5vw, 2.2rem); }
 
 .hero-slide-1 .hero-content h1 { color: var(--p-purple-deep); }
 .hero-slide-2 .hero-content h1 { color: #ffffff; text-shadow: 0 2px 16px rgba(104,42,191,0.35); }
@@ -225,7 +237,7 @@ body.dark .hero-slide .hero-content h1 {
 }
 body.dark .hero-slide .hero-content p { color: rgba(255,255,255,0.82); }
 
-.hero-content { position: relative; z-index: 2; max-width: 720px; }
+.hero-content { position: relative; z-index: 2; max-width: min(92%, 900px); }
 .hero-content h1 {
   font-family: 'Bodoni Moda', serif;
   font-weight: 900;
@@ -233,6 +245,9 @@ body.dark .hero-slide .hero-content p { color: rgba(255,255,255,0.82); }
   line-height: 1.15;
   margin-bottom: 1rem;
   letter-spacing: -0.5px;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
 }
 .hero-content h1 .char {
   display: inline-block;
@@ -336,23 +351,61 @@ body.dark .hero-carousel .carousel-control-next i { color: var(--p-pink-soft); }
   .hero-carousel .carousel-control-prev i,
   .hero-carousel .carousel-control-next i { font-size: 1.2rem; }
 }
-.hero-carousel .carousel-indicators { margin-bottom: 1.2rem; }
-.hero-carousel .carousel-indicators [data-bs-target] {
-  width: 32px; height: 3px;
-  border-radius: 2px;
-  border: none;
-  background: rgba(159,132,230,0.45);
-  transition: background 0.3s, width 0.3s;
+/* Indicadores del carrusel ocultos — sólo se navega con las flechas laterales. */
+.hero-carousel .carousel-indicators { display: none; }
+
+/* ============================================================
+ * EFECTOS DE BORDE PARA EL BOTÓN DEL CARRUSEL
+ * Se activan desde el admin (boton_border_effect) y toman el color
+ * desde --lu-fx-color (inyectado inline por main.js).
+ * ============================================================ */
+.hero-cta.fx-halo,
+.hero-cta.fx-glow,
+.hero-cta.fx-neon,
+.hero-cta.fx-double {
+  position: relative;
+  isolation: isolate;
 }
-.hero-carousel .carousel-indicators .active {
-  background: var(--p-purple-deep);
-  width: 48px;
+/* HALO — aro conic-gradient giratorio, como el botón del skintest */
+.hero-cta.fx-halo::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg,
+    #F6C6F9 0deg, #D9B7FF 60deg, #9F84E6 120deg,
+    #7732D9 180deg, #682ABF 240deg, #F6C6F9 320deg, #F6C6F9 360deg);
+  filter: blur(6px);
+  z-index: -1;
+  animation: lu-fx-halo-spin 4s linear infinite;
 }
-body.dark .hero-carousel .carousel-indicators [data-bs-target] { background: rgba(217,183,255,0.40); }
-body.dark .hero-carousel .carousel-indicators .active { background: var(--p-pink-soft); }
+@keyframes lu-fx-halo-spin { to { transform: rotate(360deg); } }
+
+/* GLOW — resplandor pulsante del color configurado */
+.hero-cta.fx-glow { animation: lu-fx-glow-pulse 2.4s ease-in-out infinite; }
+@keyframes lu-fx-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--lu-fx-color, rgba(119,50,217,0.6))); }
+  50%      { filter: drop-shadow(0 0 18px var(--lu-fx-color, rgba(119,50,217,0.95))); }
+}
+
+/* NEON — doble halo nítido como un tubo neón */
+.hero-cta.fx-neon {
+  box-shadow:
+    0 0 6px  var(--lu-fx-color, #7732d9),
+    0 0 20px var(--lu-fx-color, #7732d9),
+    inset 0 0 6px var(--lu-fx-color, #7732d9) !important;
+}
+
+/* DOUBLE — anillo externo separado del borde */
+.hero-cta.fx-double {
+  outline: 2px solid var(--lu-fx-color, currentColor);
+  outline-offset: 4px;
+}
 
 @media (max-width: 767px) {
-  .hero-slide { height: 290px; padding: 1.2rem; }
+  /* En mobile la flecha mide 44px + margin 0.6rem (~10px) — padding menor
+   * pero suficiente para que no se monte sobre el texto. */
+  .hero-slide { height: 290px; padding: 1.2rem clamp(3.5rem, 14vw, 4.5rem); }
   .hero-content p { font-size: 0.85rem; }
   .hero-cta { padding: 10px 24px; font-size: 0.85rem; }
 }
