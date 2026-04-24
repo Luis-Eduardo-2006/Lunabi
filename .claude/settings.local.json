@@ -10,7 +10,11 @@
       "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/chatbot.js\")",
       "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/api.js\")",
       "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/data.js\")",
-      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/auth.js\")"
+      "Bash(node -c \"c:/Users/Luis/Desktop/LÜNABI/assets/js/auth.js\")",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_organizations",
+      "mcp__supabase__get_cost",
+      "mcp__supabase__confirm_cost"
     ]
   }
 }
