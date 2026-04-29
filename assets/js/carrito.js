@@ -133,12 +133,54 @@
 
   function buildWhatsAppOrder() {
     if (cart.length === 0) return '';
-    let msg = '🛍️ *PEDIDO LÜNABI*\n\n📦 *Productos:*\n';
-    cart.forEach(item => {
+    const sep = '━'.repeat(14);
+    const totalItems = cart.reduce((s, c) => s + (c.qty || 0), 0);
+    const brandsMap = (typeof window !== 'undefined' && Array.isArray(window.brands)) ? window.brands : [];
+    let totalAhorro = 0;
+
+    /* Glifos BMP escritos como literales UTF-8 — sin String.fromCodePoint,
+     * sin surrogate pairs, así no hay forma de que se rompan en la URL. */
+    const E = {
+      sparkle: '✨',
+      heart:   '❤️',
+      arrow:   '→',
+      flower:  '❀'
+    };
+
+    const greeting = (typeof window.buildGreeting === 'function')
+      ? window.buildGreeting('pedido')
+      : `\u00A1Hola L\u00FCnabi! ${E.sparkle}\nQuiero hacer un pedido`;
+
+    let msg = `${greeting}\n\n${sep}\n\n`;
+    msg += `*Mi pedido* \u2014 ${totalItems} ${totalItems === 1 ? 'producto' : 'productos'}\n`;
+    cart.forEach((item, idx) => {
       const p = products.find(pr => pr.id === item.id);
-      if (p) msg += `• ${item.qty}x ${p.nombre} — S/ ${(p.precio * item.qty).toFixed(2)}\n`;
+      if (!p) return;
+      const brand = brandsMap.find(b => b.slug === p.marca);
+      const codigo = `LUN-${String(p.id).padStart(4, '0')}`;
+      const subtotal = (p.precio * item.qty).toFixed(2);
+      const tieneDesc = p.precioAntes && p.precioAntes > p.precio;
+      if (tieneDesc) totalAhorro += (p.precioAntes - p.precio) * item.qty;
+
+      msg += `\n${E.flower} *${idx + 1}. ${p.nombre}*\n`;
+      if (brand) msg += `Marca: ${brand.nombre}\n`;
+      msg += `C\u00F3digo: ${codigo}\n`;
+      msg += `Cantidad: ${item.qty} ${item.qty > 1 ? 'unidades' : 'unidad'}\n`;
+      if (tieneDesc) {
+        const pct = Math.round((p.precioAntes - p.precio) / p.precioAntes * 100);
+        msg += `Precio: ~S/ ${p.precioAntes.toFixed(2)}~ ${E.arrow} *S/ ${p.precio.toFixed(2)}* (-${pct}%)\n`;
+      } else {
+        msg += `Precio: S/ ${p.precio.toFixed(2)} c/u\n`;
+      }
+      msg += `Subtotal: *S/ ${subtotal}*\n`;
     });
-    msg += `\n💰 *Total: S/ ${getCartTotal().toFixed(2)}*\n\n📱 Por favor confirmar disponibilidad y coordinar envío.`;
+
+    msg += `\n${sep}\n\n`;
+    if (totalAhorro > 0) msg += `Ahorro total: *S/ ${totalAhorro.toFixed(2)}* ${E.sparkle}\n`;
+    msg += `*TOTAL A PAGAR: S/ ${getCartTotal().toFixed(2)}*\n\n`;
+    msg += `${sep}\n\n`;
+    msg += `\u00BFPueden confirmarme la *disponibilidad* y coordinar el *env\u00EDo*?\n\n`;
+    msg += `\u00A1Muchas gracias! ${E.heart}`;
     return msg;
   }
 
@@ -190,6 +232,24 @@
     const picker  = document.getElementById('cartFooterWa');
     if (!primary || !picker) return;
     if (showPicker) {
+      // Refresca estado de cada opción según WA_NUMBERS / placeholders.
+      const numbers = window.WA_NUMBERS || {};
+      picker.querySelectorAll('[data-wa-key]').forEach(btn => {
+        const key = btn.getAttribute('data-wa-key');
+        const num = numbers[key] && numbers[key].number;
+        const isPh = typeof window.isWaPlaceholder === 'function' && window.isWaPlaceholder(num);
+        btn.classList.toggle('is-disabled', isPh);
+        btn.disabled = isPh;
+        const hint = btn.querySelector('.cart-wa-option-hint');
+        if (hint) {
+          if (isPh) {
+            if (!hint.dataset.original) hint.dataset.original = hint.textContent;
+            hint.textContent = 'Próximamente — usa Huancayo por ahora';
+          } else if (hint.dataset.original) {
+            hint.textContent = hint.dataset.original;
+          }
+        }
+      });
       primary.hidden = true;
       picker.hidden = false;
       requestAnimationFrame(() => picker.classList.add('is-open'));
@@ -211,14 +271,19 @@
   /* Llamado cuando el usuario clickea una de las dos opciones del picker
    * inline. Registra el pedido y abre WhatsApp con el número elegido. */
   function finalizeOrder(waKey) {
+    const numbers = window.WA_NUMBERS || {};
+    const n = (numbers[waKey] && numbers[waKey].number) || window.WA_NUMBER || '';
+    // Si el número aún es placeholder (51YYYYYYYYY), avisamos y no abrimos WA.
+    if (typeof window.isWaPlaceholder === 'function' && window.isWaPlaceholder(n)) {
+      showToast('Ese canal estará disponible pronto. Mientras tanto, usa Huancayo.', 'info');
+      return;
+    }
     const msg = buildWhatsAppOrder();
     if (!msg) return;
     persistOrder(waKey);
     if (typeof window.recordSales === 'function') {
       window.recordSales(cart);
     }
-    const numbers = window.WA_NUMBERS || {};
-    const n = (numbers[waKey] && numbers[waKey].number) || window.WA_NUMBER || '51XXXXXXXXX';
     window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`, '_blank');
     // Colapsamos el picker para la próxima vez
     toggleCartWaPicker(false);

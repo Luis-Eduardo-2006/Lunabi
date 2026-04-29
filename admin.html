@@ -12,14 +12,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,700;0,900&family=Syne:wght@700;800&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css">
-  <link rel="stylesheet" href="assets/css/navbar.css">
-  <link rel="stylesheet" href="assets/css/footer.css">
-  <link rel="stylesheet" href="assets/css/cards.css">
-  <link rel="stylesheet" href="assets/css/modal.css">
-  <link rel="stylesheet" href="assets/css/carrito.css">
-  <link rel="stylesheet" href="assets/css/auth.css">
-  <link rel="stylesheet" href="assets/css/admin.css">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260428f">
+  <link rel="stylesheet" href="assets/css/navbar.css?v=20260428f">
+  <link rel="stylesheet" href="assets/css/footer.css?v=20260428f">
+  <link rel="stylesheet" href="assets/css/cards.css?v=20260428f">
+  <link rel="stylesheet" href="assets/css/modal.css?v=20260428f">
+  <link rel="stylesheet" href="assets/css/carrito.css?v=20260428f">
+  <link rel="stylesheet" href="assets/css/auth.css?v=20260428f">
+  <link rel="stylesheet" href="assets/css/admin.css?v=20260428f">
 </head>
 <body data-page="admin">
 
@@ -552,6 +552,69 @@
                 <button class="admin-btn-ghost" id="resetSlidesBtn" type="button"><i class="bi bi-arrow-counterclockwise"></i> Volver al carrusel por defecto</button>
               </div>
               <div id="slidesList" class="admin-slides-list"></div>
+
+              <!-- ========== TEMPORIZADOR DE OFERTA ========== -->
+              <h2 class="admin-panel-title" style="margin-top:2.5rem"><i class="bi bi-stopwatch"></i> Temporizador de oferta</h2>
+              <p class="admin-hint">Aparece en la home entre el carrusel y los productos más vendidos. Cuando llegue a cero, se oculta automáticamente.</p>
+
+              <form id="offerTimerForm" class="admin-form" method="post" action="#" novalidate>
+                <h3 class="admin-form-title"><i class="bi bi-clock-history"></i> Configurar oferta</h3>
+
+                <div class="admin-checks admin-checks-wide">
+                  <label><input type="checkbox" name="active"> Mostrar el temporizador en la home</label>
+                </div>
+
+                <div class="admin-grid-2">
+                  <label class="admin-field">
+                    <span>Título principal</span>
+                    <input type="text" name="titulo" placeholder="Ej. ¡Oferta especial!" maxlength="80">
+                  </label>
+                  <label class="admin-field">
+                    <span>Subtítulo / descripción</span>
+                    <input type="text" name="subtitulo" placeholder="Ej. Termina en pocas horas — no te la pierdas" maxlength="140">
+                  </label>
+                  <label class="admin-field">
+                    <span>Fecha y hora de finalización</span>
+                    <input type="datetime-local" name="target" required>
+                    <small class="admin-hint-inline">Hora local de Perú (GMT-5).</small>
+                  </label>
+                  <label class="admin-field">
+                    <span>Texto del botón</span>
+                    <input type="text" name="ctaText" placeholder="Ver ofertas" maxlength="40">
+                  </label>
+                  <label class="admin-field">
+                    <span>Enlace del botón</span>
+                    <input type="text" name="ctaLink" placeholder="sale.html" maxlength="200">
+                  </label>
+                </div>
+
+                <fieldset class="admin-fieldset">
+                  <legend>Estilo</legend>
+                  <div class="admin-grid-2">
+                    <label class="admin-field admin-field-color">
+                      <span>Color de fondo (degradado primario)</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="bgColor" value="#682abf">
+                        <input type="text" name="bgColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="bgColor" title="Por defecto"><i class="bi bi-eraser"></i></button>
+                      </div>
+                    </label>
+                    <label class="admin-field admin-field-color">
+                      <span>Color del texto</span>
+                      <div class="admin-color-input">
+                        <input type="color" name="textColor" value="#ffffff">
+                        <input type="text" name="textColorHex" placeholder="auto" maxlength="7">
+                        <button type="button" class="admin-btn-ghost admin-btn-clear" data-clear="textColor" title="Por defecto"><i class="bi bi-eraser"></i></button>
+                      </div>
+                    </label>
+                  </div>
+                </fieldset>
+
+                <div class="admin-form-actions">
+                  <button type="submit" class="admin-btn-primary"><i class="bi bi-check-lg"></i> Guardar temporizador</button>
+                  <button type="button" class="admin-btn-ghost" id="offerTimerPreviewBtn"><i class="bi bi-eye"></i> Vista previa en otra pestaña</button>
+                </div>
+              </form>
             </section>
 
             <!-- ========== MARCAS ========== -->
@@ -686,21 +749,21 @@
     </div>
   </div>
 
-  <a href="https://wa.me/51XXXXXXXXX" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Escríbenos por WhatsApp">
+  <a href="https://wa.me/51923472925" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Escríbenos por WhatsApp">
     <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
     <span class="wa-tooltip">¡Escríbenos!</span>
   </a>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/data.js"></script>
-  <script src="assets/js/theme.js"></script>
-  <script src="assets/js/carrito.js"></script>
-  <script src="assets/js/buscador.js"></script>
-  <script src="assets/js/filtros.js"></script>
-  <script src="assets/js/router.js"></script>
-  <script src="assets/js/components.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script src="assets/js/admin.js"></script>
-  <script src="assets/js/main.js"></script>
+  <script src="assets/js/data.js?v=20260428f"></script>
+  <script src="assets/js/theme.js?v=20260428f"></script>
+  <script src="assets/js/carrito.js?v=20260428f"></script>
+  <script src="assets/js/buscador.js?v=20260428f"></script>
+  <script src="assets/js/filtros.js?v=20260428f"></script>
+  <script src="assets/js/router.js?v=20260428f"></script>
+  <script src="assets/js/components.js?v=20260428f"></script>
+  <script src="assets/js/auth.js?v=20260428f"></script>
+  <script src="assets/js/admin.js?v=20260428f"></script>
+  <script src="assets/js/main.js?v=20260428f"></script>
 </body>
 </html>

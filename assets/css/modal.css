@@ -588,6 +588,23 @@ body.dark .wa-picker-number { color: #4bd981; }
   transform: translateX(4px);
 }
 
+/* Estado deshabilitado — número aún placeholder (51YYYYYYYYY).
+ * El botón se ve atenuado, sin hover lift, y la "número" pasa a gris. */
+.wa-picker-option.is-disabled,
+.wa-picker-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.4);
+}
+.wa-picker-option.is-disabled .wa-picker-number {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.wa-picker-option.is-disabled .wa-picker-arrow {
+  visibility: hidden;
+}
+
 @media (max-width: 420px) {
   .wa-picker-option { grid-template-columns: 44px 1fr; }
   .wa-picker-arrow { grid-column: 2; justify-self: end; margin-top: -6px; }

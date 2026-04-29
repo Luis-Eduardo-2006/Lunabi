@@ -15,7 +15,7 @@
  * Para cambiar los números, edita el bloque de abajo. */
 window.WA_NUMBERS = {
   local: {
-    number: '51XXXXXXXXX',
+    number: '51923472925',
     label:  'Huancayo y alrededores',
     hint:   'Atención directa y delivery local',
     icon:   'bi-geo-alt-fill'
@@ -38,7 +38,93 @@ function fmtWaNumber(n) {
   return `+${cc} ${a} ${b} ${c}`;
 }
 
+/* Un número de WA cuenta como placeholder si todavía contiene la "X" o
+ * "Y" repetidas que dejamos al sembrar el proyecto (51XXXXXXXXX / 51YYYYYYYYY).
+ * Mientras esté así, la opción correspondiente del picker se muestra como
+ * "Próximamente" y no abre WhatsApp. */
+window.isWaPlaceholder = function(num) {
+  return !num || /[XY]{3,}/i.test(String(num));
+};
+
 /* Abre el picker modal (o cae al número local si bootstrap no está listo). */
+/* Genera el código del producto a partir de su id — formato LUN-0042 */
+window.productCode = function(p) {
+  if (!p || p.id == null) return '';
+  return `LUN-${String(p.id).padStart(4, '0')}`;
+};
+
+/* Emojis — SOLO codepoints del BMP (U+0000–U+FFFF, una sola code unit).
+ * Los emojis "tradicionales" (luna, corazón morado, carrito, etc.) viven en
+ * U+1F000+ y necesitan surrogate pairs; algunos handlers de URL en Windows
+ * (WhatsApp Desktop, deeplinks) rompen los surrogate pairs convirtiéndolos
+ * en U+FFFD (�). Por eso escribimos los glifos como literales UTF-8 en el
+ * archivo, sin String.fromCodePoint — el archivo es UTF-8 y los chars son
+ * todos del BMP, así que no hay forma de que se rompan. */
+const E = {
+  sparkle: '✨',                    // ✨  — colorful en WhatsApp
+  heart:   '❤️',              // ❤️ — colorful con VS-16
+  arrow:   '→',                    // →
+  flower:  '❀',                    // ❀
+  star:    '★'                     // ★
+};
+const SEP = '━'.repeat(14);        // ━━━━━━━━━━━━━━
+
+/* Saludo con el nombre del comprador (si está logueado) — primer nombre,
+ * en mayúscula. Si no hay sesión, saludo genérico. El segundo emoji depende
+ * del contexto: 'producto' (consulta unitaria) o 'pedido' (carrito). */
+window.buildGreeting = function(context) {
+  let nombre = '';
+  try {
+    const u = (typeof window.getCurrentUser === 'function') ? window.getCurrentUser() : null;
+    if (u && u.nombre) nombre = String(u.nombre).split(' ')[0];
+    if (!nombre) {
+      const session = JSON.parse(localStorage.getItem('lunabi_session') || 'null');
+      if (session && session.nombre) nombre = String(session.nombre).split(' ')[0];
+    }
+  } catch (e) { /* sin sesión */ }
+  const cap = nombre ? nombre.charAt(0).toUpperCase() + nombre.slice(1).toLowerCase() : '';
+  const intro = `\u00A1Hola L\u00FCnabi! ${E.sparkle}`;
+  if (context === 'pedido') {
+    return cap
+      ? `${intro}\nSoy *${cap}* y quiero hacer un pedido`
+      : `${intro}\nQuiero hacer un pedido`;
+  }
+  return cap
+    ? `${intro}\nSoy *${cap}* y me interesa este producto`
+    : `${intro}\nMe interesa este producto`;
+};
+
+/* Mensaje WhatsApp para una consulta de un solo producto. Lo usamos tanto
+ * en el modal quick-view como en producto.html. Dise\u00F1ado para verse limpio
+ * y profesional en WhatsApp Web / iOS / Android \u2014 sin emojis decorativos
+ * dobles, sin caracteres ex\u00F3ticos, formato bold/strikethrough nativo. */
+window.buildProductWhatsAppMsg = function(p, qty) {
+  if (!p) return '';
+  const brand = (Array.isArray(window.brands) ? window.brands : []).find(b => b.slug === p.marca);
+  const codigo = window.productCode(p);
+  const tieneDesc = p.precioAntes && p.precioAntes > p.precio;
+  const pct = tieneDesc ? Math.round((p.precioAntes - p.precio) / p.precioAntes * 100) : 0;
+  const cantidad = Number(qty) > 0 ? Number(qty) : 1;
+  const total = p.precio * cantidad;
+
+  let msg = `${window.buildGreeting('producto')}\n\n${SEP}\n\n`;
+  msg += `${E.flower} *${p.nombre}*\n`;
+  if (brand) msg += `Marca: ${brand.nombre}\n`;
+  msg += `C\u00F3digo: ${codigo}\n`;
+  msg += `Cantidad: ${cantidad} ${cantidad > 1 ? 'unidades' : 'unidad'}\n`;
+  if (tieneDesc) {
+    msg += `Precio: ~S/ ${p.precioAntes.toFixed(2)}~ ${E.arrow} *S/ ${p.precio.toFixed(2)}* (-${pct}%)\n`;
+    msg += `Total: *S/ ${total.toFixed(2)}*\n`;
+  } else {
+    msg += `Precio: *S/ ${p.precio.toFixed(2)}*\n`;
+    if (cantidad > 1) msg += `Total: *S/ ${total.toFixed(2)}*\n`;
+  }
+  msg += `\n${SEP}\n\n`;
+  msg += `\u00BFPodr\u00EDan confirmarme la *disponibilidad* y coordinar el *env\u00EDo*?\n\n`;
+  msg += `\u00A1Gracias! ${E.heart}`;
+  return msg;
+};
+
 window.openWhatsApp = function(message = '') {
   const modal = document.getElementById('waPickerModal');
   if (!modal || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
@@ -46,14 +132,18 @@ window.openWhatsApp = function(message = '') {
     window.open(`https://wa.me/${n}?text=${encodeURIComponent(message || '')}`, '_blank');
     return;
   }
-  // Pinta números en vivo + cablea los botones
+  // Pinta números en vivo + cablea los botones. Si el número aún es
+  // placeholder (51YYYYYYYYY), marcamos la opción como "próximamente".
   modal.querySelectorAll('[data-wa-key]').forEach(btn => {
     const key = btn.getAttribute('data-wa-key');
     const n = window.WA_NUMBERS[key];
     if (!n) return;
+    const placeholder = window.isWaPlaceholder(n.number);
     const nEl = btn.querySelector('.wa-picker-number');
-    if (nEl) nEl.textContent = fmtWaNumber(n.number);
-    btn.onclick = () => {
+    if (nEl) nEl.textContent = placeholder ? 'Próximamente' : fmtWaNumber(n.number);
+    btn.classList.toggle('is-disabled', placeholder);
+    btn.disabled = placeholder;
+    btn.onclick = placeholder ? null : () => {
       window.open(`https://wa.me/${n.number}?text=${encodeURIComponent(message || '')}`, '_blank');
       const inst = bootstrap.Modal.getInstance(modal);
       if (inst) inst.hide();
@@ -410,12 +500,15 @@ window.openProductModal = function(id) {
 
   document.getElementById('modalQty').value = 1;
 
-  const waMsg = `Hola! Me interesa el producto: ${p.nombre} - S/${p.precio.toFixed(2)}. ¿Tienen stock?`;
   const modalWaBtn = document.getElementById('modalWhatsapp');
   if (modalWaBtn) {
     modalWaBtn.removeAttribute('href');
     modalWaBtn.style.cursor = 'pointer';
-    modalWaBtn.onclick = (ev) => { ev.preventDefault(); window.openWhatsApp(waMsg); };
+    modalWaBtn.onclick = (ev) => {
+      ev.preventDefault();
+      const q = parseInt(document.getElementById('modalQty')?.value, 10) || 1;
+      window.openWhatsApp(window.buildProductWhatsAppMsg(p, q));
+    };
   }
 
   const modalFav = document.getElementById('modalFav');
@@ -642,7 +735,76 @@ function renderHomePage() {
     `).join('');
   }
 
+  initOfferTimer();
   observeFadeUps();
+}
+
+/* Temporizador de oferta — lee config desde site_settings (Supabase) o
+ * localStorage como fallback. Si no está activo o ya expiró, oculta la
+ * sección. Si está activo y vigente, actualiza el countdown cada segundo. */
+let __offerTimerInterval = null;
+async function initOfferTimer() {
+  const section = document.getElementById('offerTimer');
+  if (!section) return;
+  if (__offerTimerInterval) { clearInterval(__offerTimerInterval); __offerTimerInterval = null; }
+
+  let cfg = null;
+  try {
+    if (window.LuApi && window.LuApi.getSetting) {
+      cfg = await window.LuApi.getSetting('offer_timer');
+    }
+    if (!cfg) {
+      cfg = JSON.parse(localStorage.getItem('lunabi_settings_offer_timer') || 'null');
+    }
+  } catch (e) { cfg = null; }
+
+  if (!cfg || !cfg.active || !cfg.target) { section.hidden = true; return; }
+  const targetMs = new Date(cfg.target).getTime();
+  if (isNaN(targetMs) || targetMs - Date.now() <= 0) { section.hidden = true; return; }
+
+  // Aplica textos + colores
+  const set = (sel, txt) => { const el = section.querySelector(sel); if (el && txt) el.textContent = txt; };
+  set('[data-offer-title]', cfg.titulo);
+  set('[data-offer-sub]', cfg.subtitulo);
+  set('[data-offer-cta]', cfg.ctaText);
+  const cta = section.querySelector('[data-offer-cta]');
+  if (cta && cfg.ctaLink) cta.setAttribute('href', cfg.ctaLink);
+  const card = section.querySelector('.offer-timer-card');
+  if (card) {
+    if (cfg.bgColor && /^#[0-9a-f]{6}$/i.test(cfg.bgColor)) {
+      card.style.background = `linear-gradient(135deg, ${cfg.bgColor}, ${cfg.bgColor})`;
+      card.style.setProperty('--offer-bg', cfg.bgColor);
+    } else { card.style.background = ''; card.style.removeProperty('--offer-bg'); }
+    if (cfg.textColor && /^#[0-9a-f]{6}$/i.test(cfg.textColor)) card.style.color = cfg.textColor;
+    else card.style.color = '';
+  }
+
+  section.hidden = false;
+  const dEl = section.querySelector('[data-offer-d]');
+  const hEl = section.querySelector('[data-offer-h]');
+  const mEl = section.querySelector('[data-offer-m]');
+  const sEl = section.querySelector('[data-offer-s]');
+  const pad = n => String(n).padStart(2, '0');
+  function tick() {
+    const diff = targetMs - Date.now();
+    if (diff <= 0) {
+      section.hidden = true;
+      clearInterval(__offerTimerInterval);
+      __offerTimerInterval = null;
+      return;
+    }
+    const totalSec = Math.floor(diff / 1000);
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor((totalSec % 86400) / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (dEl) dEl.textContent = pad(d);
+    if (hEl) hEl.textContent = pad(h);
+    if (mEl) mEl.textContent = pad(m);
+    if (sEl) sEl.textContent = pad(s);
+  }
+  tick();
+  __offerTimerInterval = setInterval(tick, 1000);
 }
 
 function renderCategoryPageByKey(pageKey) {
@@ -788,10 +950,12 @@ function renderProductoPage() {
   });
   if (addBtn) addBtn.addEventListener('click', () => addToCart(p.id, qty));
   if (wspBtn) {
-    const msg = `Hola! Me interesa el producto: ${p.nombre} - S/${p.precio.toFixed(2)}. ¿Tienen stock?`;
     wspBtn.removeAttribute('href');
     wspBtn.style.cursor = 'pointer';
-    wspBtn.onclick = (ev) => { ev.preventDefault(); window.openWhatsApp(msg); };
+    wspBtn.onclick = (ev) => {
+      ev.preventDefault();
+      window.openWhatsApp(window.buildProductWhatsAppMsg(p, qty));
+    };
   }
 
   const favBtn = document.getElementById('productoFav');

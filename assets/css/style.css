@@ -1584,6 +1584,166 @@ body.dark .faq-group-title i {
 .value-card h4 { margin: 0.4rem 0 0; font-size: 0.95rem; }
 
 /* ============================================================
+ * TEMPORIZADOR DE OFERTA
+ * ============================================================ */
+.offer-timer { padding: 2.5rem 0 1.5rem; }
+.offer-timer-card {
+  --offer-bg: var(--p-purple-deep);
+  background: linear-gradient(135deg, var(--p-purple-deep) 0%, var(--p-purple-vibrant) 60%, #e06ca1 110%);
+  color: #fff;
+  border-radius: 24px;
+  padding: 1.6rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 14px 40px rgba(104,42,191,0.32);
+  position: relative;
+  overflow: hidden;
+}
+.offer-timer-card::before {
+  content: '';
+  position: absolute;
+  top: -40%; right: -10%;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(247,198,249,0.35) 0%, transparent 70%);
+  pointer-events: none;
+}
+.offer-timer-text { position: relative; z-index: 1; min-width: 0; }
+.offer-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.18);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  backdrop-filter: blur(6px);
+}
+.offer-timer-badge i { font-size: 0.85rem; }
+.offer-timer-title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  line-height: 1.1;
+  margin: 0 0 4px;
+  color: inherit;
+}
+.offer-timer-sub {
+  margin: 0;
+  font-size: 0.92rem;
+  color: rgba(255,255,255,0.88);
+  line-height: 1.35;
+}
+.offer-timer-countdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+.offer-timer-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 64px;
+  backdrop-filter: blur(8px);
+}
+.offer-timer-num {
+  font-family: var(--font-heading);
+  font-size: clamp(1.4rem, 2.8vw, 2rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.offer-timer-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.82);
+  margin-top: 2px;
+}
+.offer-timer-sep {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 12px;
+  animation: offer-blink 1s ease-in-out infinite;
+}
+@keyframes offer-blink {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+.offer-timer-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 26px;
+  background: #fff;
+  color: var(--offer-bg, var(--p-purple-deep));
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.92rem;
+  text-decoration: none;
+  letter-spacing: 0.4px;
+  transition: transform 0.25s, box-shadow 0.25s;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+.offer-timer-cta::after {
+  content: '\F285';
+  font-family: 'bootstrap-icons';
+  transition: transform 0.25s;
+}
+.offer-timer-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.28);
+}
+.offer-timer-cta:hover::after { transform: translateX(3px); }
+
+body.dark .offer-timer-card {
+  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+}
+body.dark .offer-timer-cta {
+  background: var(--p-pink-soft);
+  color: #2a1050;
+}
+
+@media (max-width: 900px) {
+  .offer-timer-card { grid-template-columns: 1fr; text-align: center; gap: 1.2rem; padding: 1.4rem 1.2rem; }
+  .offer-timer-countdown { justify-content: center; }
+  .offer-timer-cta { justify-self: center; }
+}
+@media (max-width: 480px) {
+  .offer-timer { padding: 1.6rem 0 1rem; }
+  .offer-timer-card { padding: 1.2rem 1rem; border-radius: 20px; }
+  .offer-timer-unit { min-width: 52px; padding: 6px 8px; }
+  .offer-timer-sep { font-size: 1.2rem; margin-bottom: 10px; }
+  .offer-timer-num { font-size: 1.4rem; }
+  .offer-timer-label { font-size: 0.58rem; }
+  .offer-timer-title { font-size: 1.2rem; }
+  .offer-timer-sub { font-size: 0.82rem; }
+  .offer-timer-cta { padding: 10px 20px; font-size: 0.85rem; }
+}
+
+/* ============================================================
  * RESPONSIVE EXTRA — pantallas ultra-estrechas (<480px)
  * ============================================================ */
 @media (max-width: 480px) {

@@ -460,6 +460,16 @@ body.dark .cart-wa-option:hover { background: rgba(37,211,102,0.14); }
   transform: translateX(4px);
 }
 
+/* Estado deshabilitado — número aún placeholder. */
+.cart-wa-option.is-disabled,
+.cart-wa-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.4);
+}
+.cart-wa-option.is-disabled .cart-wa-option-arrow { visibility: hidden; }
+
 /* ============================================================
  * RESPONSIVE
  * ============================================================ */

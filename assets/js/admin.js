@@ -2336,6 +2336,102 @@
     });
   }
 
+  /* ---------- OFFER TIMER (admin) ----------
+   * Form con título, subtítulo, fecha objetivo, CTA y colores. Se persiste
+   * en site_settings (key: 'offer_timer') vía LuApi.setSetting + fallback
+   * en localStorage (lunabi_settings_offer_timer). */
+  const OFFER_TIMER_KEY = 'offer_timer';
+  function offerTimerLocalDefault() {
+    return {
+      active: false,
+      titulo: '¡Oferta especial!',
+      subtitulo: 'Descuentos por tiempo limitado en tus favoritos',
+      target: '',
+      ctaText: 'Ver ofertas',
+      ctaLink: 'sale.html',
+      bgColor: '',
+      textColor: ''
+    };
+  }
+  function toLocalDatetimeInput(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const off = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - off).toISOString().slice(0, 16);
+  }
+  function fromLocalDatetimeInput(local) {
+    if (!local) return '';
+    const d = new Date(local);
+    return isNaN(d.getTime()) ? '' : d.toISOString();
+  }
+
+  async function loadOfferTimerToForm() {
+    const form = document.getElementById('offerTimerForm');
+    if (!form) return;
+    let cfg = offerTimerLocalDefault();
+    try {
+      let saved = null;
+      if (window.LuApi && window.LuApi.getSetting) {
+        saved = await window.LuApi.getSetting(OFFER_TIMER_KEY);
+      }
+      if (!saved) {
+        saved = JSON.parse(localStorage.getItem('lunabi_settings_' + OFFER_TIMER_KEY) || 'null');
+      }
+      if (saved) cfg = { ...cfg, ...saved };
+    } catch (e) { /* default */ }
+    form.querySelector('[name="active"]').checked      = !!cfg.active;
+    form.querySelector('[name="titulo"]').value        = cfg.titulo || '';
+    form.querySelector('[name="subtitulo"]').value     = cfg.subtitulo || '';
+    form.querySelector('[name="target"]').value        = toLocalDatetimeInput(cfg.target);
+    form.querySelector('[name="ctaText"]').value       = cfg.ctaText || '';
+    form.querySelector('[name="ctaLink"]').value       = cfg.ctaLink || '';
+    writeColorVal(form, 'bgColor',   cfg.bgColor   || '');
+    writeColorVal(form, 'textColor', cfg.textColor || '');
+  }
+
+  function initOfferTimerForm() {
+    const form = document.getElementById('offerTimerForm');
+    if (!form) return;
+    form.querySelectorAll('.admin-image-input').forEach(wireImageInput);
+    initColorInputs(form);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const cfg = {
+        active:    form.querySelector('[name="active"]').checked,
+        titulo:    (fd.get('titulo') || '').trim(),
+        subtitulo: (fd.get('subtitulo') || '').trim(),
+        target:    fromLocalDatetimeInput(fd.get('target')),
+        ctaText:   (fd.get('ctaText') || '').trim(),
+        ctaLink:   (fd.get('ctaLink') || '').trim(),
+        bgColor:   readColorVal(form, 'bgColor'),
+        textColor: readColorVal(form, 'textColor')
+      };
+      if (cfg.active && !cfg.target) {
+        if (window.showToast) window.showToast('Elige una fecha y hora de finalización', 'info');
+        return;
+      }
+      try {
+        if (window.LuApi && window.LuApi.setSetting) {
+          await window.LuApi.setSetting(OFFER_TIMER_KEY, cfg);
+        } else {
+          localStorage.setItem('lunabi_settings_' + OFFER_TIMER_KEY, JSON.stringify(cfg));
+        }
+        if (window.showToast) window.showToast(cfg.active ? 'Temporizador activado' : 'Temporizador guardado', 'success');
+      } catch (err) {
+        console.warn('[admin] guardar temporizador', err);
+        if (window.showToast) window.showToast('Error al guardar el temporizador', 'info');
+      }
+    });
+
+    const previewBtn = document.getElementById('offerTimerPreviewBtn');
+    if (previewBtn) previewBtn.addEventListener('click', () => window.open('index.html', '_blank'));
+
+    loadOfferTimerToForm();
+  }
+
   /* ---------- INIT ---------- */
   function initAdmin() {
     if (!document.body || document.body.dataset.page !== 'admin') return;
@@ -2344,6 +2440,7 @@
     initSlidesForm();
     initBrandsForm();
     initStatDetail();
+    initOfferTimerForm();
     refreshAllAdminViews();
 
     // Consulta Supabase directamente (espera hasta 5s a que LuApi cargue)

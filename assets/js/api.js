@@ -215,12 +215,28 @@
     }).select('*').single();
     if (error) throw error;
 
+    // Pre-validamos qué product_id existen en remoto. Los que no existen
+    // se insertan con product_id=null (datos descriptivos se conservan).
+    const ids = (items || []).map(it => Number(it.id)).filter(Boolean);
+    let existingIds = new Set();
+    if (ids.length) {
+      try {
+        const { data: rows } = await client.from('products').select('id').in('id', ids);
+        existingIds = new Set((rows || []).map(r => r.id));
+      } catch (e) { /* si falla, asumimos ninguno existe */ }
+    }
+
     const rows = (items || []).map(it => ({
-      order_id: ord.id, product_id: it.id, nombre: it.nombre,
+      order_id: ord.id,
+      product_id: existingIds.has(Number(it.id)) ? Number(it.id) : null,
+      nombre: it.nombre,
       marca: it.marca || '', imagen: it.imagen || '',
       unit_price: it.precio || 0, qty: it.qty || 1
     }));
-    if (rows.length) await client.from('order_items').insert(rows);
+    if (rows.length) {
+      const { error: itemsErr } = await client.from('order_items').insert(rows);
+      if (itemsErr) console.warn('[LuApi] order_items insert', itemsErr);
+    }
     return { id: displayId, createdAt: Date.now(), items, total, status: 'pendiente' };
   }
 
@@ -302,9 +318,36 @@
       return;
     }
     const client = await ensureSupabase();
-    for (const it of (items || [])) {
-      await client.rpc('record_sale', { p_product_id: Number(it.id), p_qty: Number(it.qty) || 1 });
+
+    // Pre-filtramos los items cuyo product_id existe en remoto. Sin esto,
+    // el RPC record_sale falla con 409 (FK violation) si el producto solo
+    // vive en localStorage del admin.
+    const ids = (items || []).map(it => Number(it.id)).filter(Boolean);
+    let existingIds = new Set();
+    if (ids.length) {
+      try {
+        const { data: rows } = await client.from('products').select('id').in('id', ids);
+        existingIds = new Set((rows || []).map(r => r.id));
+      } catch (e) { /* sin BD, no llamamos al RPC */ return; }
     }
+
+    // Siempre guardamos también en local para que el badge "más vendido"
+    // se calcule incluso si remote no acepta el producto.
+    const map = LS.get('lunabi_ventas', {});
+    for (const it of (items || [])) {
+      const n = Number(it.id);
+      const q = Number(it.qty) || 1;
+      if (!n) continue;
+      map[n] = (Number(map[n]) || 0) + q;
+      if (existingIds.has(n)) {
+        try {
+          await client.rpc('record_sale', { p_product_id: n, p_qty: q });
+        } catch (e) {
+          console.warn('[LuApi] record_sale (silenciado)', e && e.message);
+        }
+      }
+    }
+    LS.set('lunabi_ventas', map);
   }
 
   async function getSalesMap() {
@@ -473,10 +516,20 @@
 
   /* --------------- SITE SETTINGS --------------- */
   async function getSetting(key) {
-    if (!configured) return null;
+    if (!configured) return LS.get('lunabi_settings_' + key, null);
     const client = await ensureSupabase();
     const { data } = await client.from('site_settings').select('value').eq('key', key).maybeSingle();
     return data ? data.value : null;
+  }
+  async function setSetting(key, value) {
+    LS.set('lunabi_settings_' + key, value);
+    if (!configured) return value;
+    const client = await ensureSupabase();
+    const { data, error } = await client.from('site_settings')
+      .upsert({ key, value }, { onConflict: 'key' })
+      .select('value').single();
+    if (error) { console.warn('[LuApi] setSetting', error); return value; }
+    return data ? data.value : value;
   }
 
   /* --------------- EXPORT --------------- */
@@ -500,6 +553,6 @@
     adminUpsertBrand,   adminDeleteBrand,
     adminUpsertSlide,   adminDeleteSlide,
     // settings
-    getSetting
+    getSetting, setSetting
   };
 })();
