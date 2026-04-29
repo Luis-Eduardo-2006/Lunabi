@@ -54,7 +54,11 @@
 
   --font-heading: 'Syne', 'Bodoni Moda', serif;
   --font-body:    'Epilogue', sans-serif;
-  --nav-h-top:    72px;
+  /* Navbar es position:sticky (ocupa su espacio en el flujo), así que no
+   * necesita compensación de altura. Las variables --nav-h-top / --nav-h-bot
+   * se mantienen en 0 para que las páginas con calc(...) solo sumen sus
+   * propios rems de espaciado sobre el flujo natural. */
+  --nav-h-top:    0px;
   --nav-h-bot:    0px;
 
   /* Glass navbar tokens (estilo.txt frost effect) */
@@ -128,6 +132,11 @@ html {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: var(--p-lila-mid) transparent;
+  /* overflow-x:hidden vive en <html> en lugar del <body>, así position:sticky
+   * del navbar funciona correctamente (sticky se ancla al ancestor scrolleable;
+   * si body tiene overflow:hidden, body se vuelve el contenedor scrolleable y
+   * sticky deja de seguir al scroll del viewport). */
+  overflow-x: hidden;
 }
 ::-webkit-scrollbar { width: 9px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -148,10 +157,14 @@ body {
   font-weight: 400;
   color: var(--text-main);
   background: var(--bg-main);
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   transition: background 0.45s ease, color 0.45s ease;
 }
+/* Cuando el menú móvil está abierto, bloqueamos el scroll del body para
+ * que solo el menú scrollee (evita que la página de atrás se mueva). */
+body.lu-nav-open { overflow: hidden; }
+
+/* El navbar (z-index: 1030) queda encima del contenido al scrollear. */
 
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
@@ -258,9 +271,17 @@ body.dark .hero-slide .hero-content p { color: rgba(255,255,255,0.82); }
   line-height: 1.15;
   margin-bottom: 1rem;
   letter-spacing: -0.5px;
-  overflow-wrap: break-word;
-  word-break: normal;
-  hyphens: auto;
+  /* No cortar palabras: si una no cabe, salta entera a la línea siguiente. */
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
+}
+/* Cada palabra es una unidad indivisible. Los .char (letras animadas) viven
+ * dentro de .word; como .word es inline-block + nowrap, el navegador puede
+ * saltar de línea ENTRE palabras pero nunca dentro de una. */
+.hero-content h1 .word {
+  display: inline-block;
+  white-space: nowrap;
 }
 .hero-content h1 .char {
   display: inline-block;
@@ -276,6 +297,9 @@ body.dark .hero-slide .hero-content p { color: rgba(255,255,255,0.82); }
   font-size: 1.05rem;
   font-weight: 400;
   margin-bottom: 1.6rem;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
 }
 
 .hero-cta {
@@ -430,17 +454,21 @@ body.dark .hero-carousel .carousel-control-next i { color: var(--p-pink-soft); }
   0%, 100% { opacity: 0.55; transform: scale(0.97); }
   50%      { opacity: 0.95; transform: scale(1.03); }
 }
-/* Fallback para navegadores sin soporte @property — rota el pseudo-element
- * físicamente. Con el halo agrandado y desplazado hacia abajo como sombra,
- * la deformación al rotar no es visible. */
+/* Fallback para navegadores sin soporte @property (Safari < 16.4, etc.).
+ * NO rotamos el pseudo-element con transform: rotate() porque al hacerlo
+ * un elemento con forma pill (más ancho que alto) "gira en círculo" y
+ * deforma el contorno del botón en mobile/tablet. En su lugar, mantenemos
+ * el conic-gradient estático y animamos solo opacity + un suave pulso —
+ * el halo se ve respirando alrededor del botón sin perder su forma. */
 @supports not (background: paint(worklet)) {
   .hero-cta.fx-halo::before {
-    animation: lu-fx-halo-spin-fallback 4.5s linear infinite;
-    background: conic-gradient(from 0deg,
+    animation: lu-fx-halo-pulse-static 3s ease-in-out infinite;
+    background: conic-gradient(from 45deg,
       #F6C6F9, #D9B7FF, #9F84E6, #7732D9, #682ABF, #e06ca1, #F6C6F9);
   }
-  @keyframes lu-fx-halo-spin-fallback {
-    to { transform: rotate(360deg); }
+  @keyframes lu-fx-halo-pulse-static {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
   }
 }
 
@@ -1507,9 +1535,6 @@ body.dark .cursor-dot { background: var(--p-pink-soft); mix-blend-mode: differen
 /* Colores por canal */
 .channel-fb { color: #1877F2; }
 .channel-fb .contact-channel-icon { background: linear-gradient(135deg, #1877F2, #0C5FD0); }
-
-.channel-messenger { color: #0099FF; }
-.channel-messenger .contact-channel-icon { background: linear-gradient(135deg, #00C6FF, #0078FF); }
 
 .channel-wa { color: #25D366; }
 .channel-wa .contact-channel-icon { background: linear-gradient(135deg, #25D366, #128C7E); }

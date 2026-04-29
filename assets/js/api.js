@@ -291,10 +291,44 @@
     await client.from('orders').update(patch).eq('display_id', orderId);
   }
 
+  /* Confirma un pedido: cambia status 'pendiente' → 'confirmado', fija el
+   * stage inicial 'confirmado' y guarda el momento de la confirmación. Hasta
+   * que admin llame esto, el pedido NO es visible en "Mi cuenta" del user. */
+  async function confirmOrder(orderId) {
+    const nowMs = Date.now();
+    if (!configured) {
+      const all = LS.get('lunabi_orders', {});
+      for (const email of Object.keys(all)) {
+        const idx = (all[email] || []).findIndex(o => o.id === orderId);
+        if (idx > -1) {
+          all[email][idx].status = 'confirmado';
+          all[email][idx].stageKey = 'confirmado';
+          all[email][idx].confirmedAt = nowMs;
+          LS.set('lunabi_orders', all);
+          return;
+        }
+      }
+      return;
+    }
+    const client = await ensureSupabase();
+    await client.from('orders').update({
+      status: 'confirmado',
+      stage_key: 'confirmado',
+      updated_at: new Date(nowMs).toISOString()
+    }).eq('display_id', orderId);
+  }
+
   function mapOrderFromDb(o) {
+    // confirmedAt: cuando el admin pulsa "Confirmar", status pasa a algo distinto
+    // de 'pendiente' y updated_at refleja ese momento. Lo usamos como base
+    // para el timeline de envío en la cuenta del user.
+    const confirmedAt = (o.status && o.status !== 'pendiente' && o.updated_at)
+      ? new Date(o.updated_at).getTime()
+      : null;
     return {
       id: o.display_id,
       createdAt: new Date(o.created_at).getTime(),
+      confirmedAt,
       total: Number(o.total),
       status: o.status,
       stageKey: o.stage_key || null,
@@ -545,7 +579,7 @@
     // skintest
     saveSkintest, getMySkintest,
     // pedidos
-    createOrder, listMyOrders, listAllOrders, updateOrderStage,
+    createOrder, listMyOrders, listAllOrders, updateOrderStage, confirmOrder,
     // ventas
     recordSale, getSalesMap,
     // admin

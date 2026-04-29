@@ -209,8 +209,8 @@ create table if not exists public.site_settings (
 -- Semilla: números de WhatsApp
 insert into public.site_settings (key, value) values
   ('wa_numbers', jsonb_build_object(
-    'local',    jsonb_build_object('number','51XXXXXXXXX','label','Huancayo y alrededores','hint','Atención directa y delivery local'),
-    'nacional', jsonb_build_object('number','51YYYYYYYYY','label','Envíos nacionales',      'hint','Otras regiones del Perú — pedido anticipado')
+    'local',    jsonb_build_object('number','51923472925','label','Huancayo y alrededores','hint','Atención directa y delivery local'),
+    'nacional', jsonb_build_object('number','51906745624','label','Envíos nacionales',      'hint','Otras regiones del Perú — pedido anticipado')
   ))
 on conflict (key) do nothing;
 

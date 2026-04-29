@@ -86,7 +86,9 @@
   }
 
   function renderStats(session) {
-    const orders = getMyOrders(session.email);
+    // Solo cuentan los pedidos ya confirmados por el admin (los pendientes
+    // de confirmación aún no son ventas efectivas para el cliente).
+    const orders = getMyOrders(session.email).filter(isOrderConfirmed);
     const totalSpent = orders.reduce((s, o) => s + (Number(o.total) || 0), 0);
     const favs = getFavs();
     const test = getMyTest(session.email);
@@ -132,7 +134,10 @@
   ];
 
   function computeStages(order) {
-    const elapsedH = (Date.now() - (order.createdAt || 0)) / 3600000;
+    // El timeline empieza cuando el admin confirma el pedido (confirmedAt).
+    // Si no hay confirmedAt, fallback a createdAt para pedidos legacy.
+    const startMs = order.confirmedAt || order.createdAt || 0;
+    const elapsedH = (Date.now() - startMs) / 3600000;
     const delivered = order.status === 'entregado';
     // Si el admin marcó una etapa manual (order.stageKey), usamos esa para
     // fijar qué pasos están hechos vs. actual. Si no, inferimos por tiempo.
@@ -156,9 +161,19 @@
         else                                       state = 'pending';
       }
 
-      const expectedDate = new Date((order.createdAt || Date.now()) + s.hoursAfter * 3600000);
+      const expectedDate = new Date(startMs + s.hoursAfter * 3600000);
       return { ...s, state, expectedDate };
     });
+  }
+
+  /* Un pedido se considera "confirmado por el admin" cuando:
+   *  - Tiene confirmedAt (flujo nuevo), o
+   *  - Su status pasó de 'pendiente' a otra cosa (legacy / sync remoto).
+   * Mientras esté en 'pendiente' sin confirmar, NO se muestra en Mi cuenta. */
+  function isOrderConfirmed(o) {
+    if (!o) return false;
+    if (o.confirmedAt) return true;
+    return !!(o.status && o.status !== 'pendiente');
   }
 
   function inferStatus(order) {
@@ -223,23 +238,43 @@
   /* ---------- PEDIDOS ---------- */
   function renderOrders(session) {
     const host = document.getElementById('cuentaPanelPedidos');
-    const orders = getMyOrders(session.email);
+    // Solo mostramos pedidos que el admin ya confirmó. Los que enviaste por
+    // WhatsApp pero aún están en cola (status='pendiente' sin confirmar)
+    // se quedan ocultos hasta que el admin los procese.
+    const allOrders = getMyOrders(session.email);
+    const orders = allOrders.filter(isOrderConfirmed);
+    const pendingCount = allOrders.length - orders.length;
+
     const hdr = `
       <div class="cuenta-panel-header">
         <h2 class="cuenta-panel-title"><i class="bi bi-bag-check"></i> Mis pedidos</h2>
         <span class="cuenta-rutina-tag"><i class="bi bi-receipt"></i> ${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}</span>
       </div>`;
+
+    // Aviso cuando hay pedidos en cola de confirmación
+    const pendingNote = pendingCount > 0
+      ? `<div class="cuenta-pending-banner">
+           <i class="bi bi-hourglass-split"></i>
+           <div>
+             <strong>${pendingCount} ${pendingCount === 1 ? 'pedido enviado, esperando confirmación' : 'pedidos enviados, esperando confirmación'}</strong>
+             <span>Te avisaremos por WhatsApp en cuanto lo procesemos. Aquí aparecerá el detalle y el seguimiento.</span>
+           </div>
+         </div>`
+      : '';
+
     if (!orders.length) {
-      host.innerHTML = hdr + `
+      host.innerHTML = hdr + pendingNote + `
         <div class="cuenta-empty">
           <i class="bi bi-bag"></i>
-          <h3>Aún no tienes pedidos</h3>
-          <p>Cuando envíes tu primer pedido por WhatsApp, aparecerá aquí con todos sus detalles.</p>
+          <h3>Aún no tienes pedidos confirmados</h3>
+          <p>${pendingCount > 0
+            ? 'Tu pedido fue recibido por WhatsApp. En cuanto lo confirmemos aparecerá aquí con el seguimiento.'
+            : 'Cuando envíes tu primer pedido por WhatsApp, aparecerá aquí una vez confirmado.'}</p>
           <a href="skincare.html" class="cuenta-btn-primary"><i class="bi bi-stars"></i> Explorar productos</a>
         </div>`;
       return;
     }
-    host.innerHTML = hdr + orders.map(renderOrder).join('');
+    host.innerHTML = hdr + pendingNote + orders.map(renderOrder).join('');
 
     host.querySelectorAll('[data-repeat-order]').forEach(btn => {
       btn.addEventListener('click', () => {

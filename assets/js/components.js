@@ -12,7 +12,7 @@
  */
 
 (function() {
-  const WA_NUMBER_FALLBACK = '51XXXXXXXXX';
+  const WA_NUMBER_FALLBACK = '51923472925';
 
   const NAVBAR_HTML = `
     <nav class="navbar navbar-expand-lg fixed-top navbar-glass" id="navbar">
@@ -79,7 +79,8 @@
             </li>
 
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="skincare.html" data-nav="skincare" role="button">Skincare</a>
+              <a class="nav-link" href="skincare.html" data-nav="skincare">Skincare</a>
+              <button class="nav-caret" type="button" aria-label="Abrir submenú de Skincare" aria-expanded="false"><i class="bi bi-chevron-down"></i></button>
               <ul class="dropdown-menu lu-dropdown-menu mega-dropdown-menu mega-has-flyouts">
                 <li class="mega-item">
                   <a href="skincare.html?categoria=limpieza" class="mega-header has-subs">Limpieza</a>
@@ -149,7 +150,8 @@
             </li>
 
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="maquillaje.html" data-nav="maquillaje" role="button">Maquillaje</a>
+              <a class="nav-link" href="maquillaje.html" data-nav="maquillaje">Maquillaje</a>
+              <button class="nav-caret" type="button" aria-label="Abrir submenú de Maquillaje" aria-expanded="false"><i class="bi bi-chevron-down"></i></button>
               <ul class="dropdown-menu lu-dropdown-menu mega-dropdown-menu mega-has-flyouts">
                 <li class="mega-item">
                   <a href="maquillaje.html?categoria=rostro" class="mega-header has-subs">Rostro</a>
@@ -183,7 +185,8 @@
             </li>
 
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="corporal.html" data-nav="corporal" role="button">Corporal</a>
+              <a class="nav-link" href="corporal.html" data-nav="corporal">Corporal</a>
+              <button class="nav-caret" type="button" aria-label="Abrir submenú de Corporal" aria-expanded="false"><i class="bi bi-chevron-down"></i></button>
               <ul class="dropdown-menu lu-dropdown-menu mega-dropdown-menu mega-2col">
                 <li class="mega-item">
                   <a href="corporal.html?categoria=cuerpo" class="mega-header">Cuerpo</a>
@@ -202,7 +205,8 @@
             <li class="nav-item"><a class="nav-link" href="accesorios.html" data-nav="accesorios">Accesorios</a></li>
 
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="marcas.html" data-nav="marcas" role="button">Marcas</a>
+              <a class="nav-link" href="marcas.html" data-nav="marcas">Marcas</a>
+              <button class="nav-caret" type="button" aria-label="Abrir submenú de Marcas" aria-expanded="false"><i class="bi bi-chevron-down"></i></button>
               <ul class="dropdown-menu lu-dropdown-menu mega-dropdown-menu" id="marcasDropMenu"></ul>
             </li>
 
@@ -237,9 +241,9 @@
             </div>
             <div class="footer-social">
               <a href="#" class="lu-wa-link" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
-              <a href="https://instagram.com/lunabi" target="_blank" rel="noopener" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-              <a href="https://www.facebook.com/lunabi" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-              <a href="https://www.tiktok.com/@lunabi" target="_blank" rel="noopener" aria-label="TikTok">
+              <a href="https://www.instagram.com/lunabiskincare/" target="_blank" rel="noopener" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+              <a href="https://www.facebook.com/share/18hq3mgV7T/?mibextid=wwXIfr" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+              <a href="https://www.tiktok.com/@lunabi.pe?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener" aria-label="TikTok">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.46V13a8.27 8.27 0 005.58 2.17v-3.44a4.85 4.85 0 01-2.84-1.04v-4z"/></svg>
               </a>
             </div>

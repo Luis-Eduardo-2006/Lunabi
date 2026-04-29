@@ -58,9 +58,10 @@ window.__baseBrandMaxId   = brands.reduce((m, b) => Math.max(m, b.id), 0);
   async function go() {
     if (!window.LuApi || !window.LuApi.isRemote()) return;
     try {
-      const [remoteProducts, remoteBrands] = await Promise.all([
+      const [remoteProducts, remoteBrands, remoteSlides] = await Promise.all([
         window.LuApi.listProducts(),
-        window.LuApi.listBrands()
+        window.LuApi.listBrands(),
+        window.LuApi.listSlides ? window.LuApi.listSlides() : Promise.resolve([])
       ]);
       if (Array.isArray(remoteBrands) && remoteBrands.length) {
         brands.splice(0, brands.length, ...remoteBrands);
@@ -68,9 +69,23 @@ window.__baseBrandMaxId   = brands.reduce((m, b) => Math.max(m, b.id), 0);
       if (Array.isArray(remoteProducts) && remoteProducts.length) {
         products.splice(0, products.length, ...remoteProducts);
       }
+      // Slides del carrusel: cacheamos las slides remotas en localStorage para
+      // que initHero() las lea como si fueran admin overrides locales. Así
+      // cualquier visitante ve las slides configuradas a nivel de BD, no las
+      // que tuviera guardadas en su propio navegador.
+      if (Array.isArray(remoteSlides)) {
+        try { localStorage.setItem('lunabi_admin_slides', JSON.stringify(remoteSlides)); } catch (e) {}
+      }
       if (typeof window.recomputeBestSellers === 'function') window.recomputeBestSellers();
       // Re-render: si la página actual tiene renderer, lo dispara de nuevo
       if (typeof window.rerenderCurrentPage === 'function') window.rerenderCurrentPage();
+      // Si estamos en la home, re-inicializa el carrusel con las slides remotas.
+      if (typeof window.initHero === 'function') window.initHero();
+      // Repinta el carrito (drawer + página dedicada). El cart en localStorage
+      // guarda solo {id, qty}, y la primera vez que initCart() corrió, products
+      // todavía estaba vacío, así que los items quedaron en blanco. Ahora que
+      // ya están cargados, los pintamos correctamente.
+      if (typeof window.updateCartUI === 'function') window.updateCartUI();
       document.dispatchEvent(new Event('lunabi:data-ready'));
     } catch (e) { console.warn('[data.js] rehidratación remota falló', e); }
   }

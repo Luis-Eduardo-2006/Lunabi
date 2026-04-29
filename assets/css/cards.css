@@ -426,3 +426,19 @@ body.dark .btn-fav-detail.active {
   background: rgba(247,198,249,0.12);
 }
 body.dark .btn-fav-detail.active i { color: var(--p-pink-soft); }
+
+/* ============================================================
+ * GRID DE CATEGORÍAS — TABLET (md, 768px–991.98px)
+ * ============================================================
+ * En las páginas de categoría/marca (#categoryGrid) queremos 2 columnas en
+ * tablet en lugar de 3 (default Bootstrap col-md-4). Esto da más respiración
+ * a las tarjetas en pantallas medianas. El #productGrid del index se queda
+ * con su grid original (3 cols en md) para mantener la densidad visual del
+ * "Más Vendidos". */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  #categoryGrid > .col-md-4 {
+    flex: 0 0 auto;
+    width: 50%;
+    max-width: 50%;
+  }
+}

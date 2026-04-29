@@ -1832,11 +1832,23 @@
     return out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }
 
-  /* Deriva la etapa actual si el admin no la marcó a mano — usa el mismo
-   * cálculo por tiempo que cuenta.js para mantener consistencia. */
+  /* Un pedido se considera confirmado cuando el admin pulsó "Confirmar"
+   * (queda confirmedAt) o cuando su status pasó de 'pendiente' (legacy). */
+  function isOrderConfirmed(o) {
+    if (!o) return false;
+    if (o.confirmedAt) return true;
+    return !!(o.status && o.status !== 'pendiente');
+  }
+
+  /* Deriva la etapa actual si el admin no la marcó a mano — el timeline
+   * arranca en `confirmedAt` (no en `createdAt`) para reflejar el momento
+   * real en que el admin tomó el pedido. Si todavía no está confirmado,
+   * devolvemos null — esos pedidos aparecen como "Pendiente de confirmación". */
   function computeAutoStageKey(order) {
+    if (!isOrderConfirmed(order)) return null;
     if (order.status === 'entregado') return 'entregado';
-    const h = (Date.now() - (order.createdAt || 0)) / 3600000;
+    const start = order.confirmedAt || order.createdAt || 0;
+    const h = (Date.now() - start) / 3600000;
     if (h >= 432) return 'entregado';
     if (h >= 360) return 'nacional';
     if (h >= 264) return 'aduana';
@@ -1853,11 +1865,32 @@
     if (!Array.isArray(map[email])) return;
     const idx = map[email].findIndex(o => o.id === orderId);
     if (idx === -1) return;
+    // Si el admin toca cualquier stage, el pedido queda confirmado.
+    if (!map[email][idx].confirmedAt) {
+      map[email][idx].confirmedAt = Date.now();
+      if (map[email][idx].status === 'pendiente') map[email][idx].status = 'confirmado';
+    }
     map[email][idx].stageKey = stageKey;
     if (stageKey === 'entregado') map[email][idx].status = 'entregado';
-    else if (map[email][idx].status === 'entregado') map[email][idx].status = 'pendiente';
+    else if (map[email][idx].status === 'entregado') map[email][idx].status = 'confirmado';
     saveOrdersMap(map);
     syncOrderStage(orderId, stageKey);
+  }
+
+  /* Confirma un pedido pendiente: lo marca como confirmado, pone el primer
+   * stage del timeline y arranca el cálculo de tiempos desde ahora. */
+  function confirmOrder(email, orderId) {
+    const map = loadOrdersMap();
+    if (!Array.isArray(map[email])) return;
+    const idx = map[email].findIndex(o => o.id === orderId);
+    if (idx === -1) return;
+    map[email][idx].status = 'confirmado';
+    map[email][idx].stageKey = 'confirmado';
+    map[email][idx].confirmedAt = Date.now();
+    saveOrdersMap(map);
+    if (window.LuApi && window.LuApi.confirmOrder) {
+      window.LuApi.confirmOrder(orderId).catch(e => console.warn('[admin] confirmOrder', e));
+    }
   }
 
   function deleteOrder(email, orderId) {
@@ -1879,19 +1912,24 @@
     const orders = flattenOrders();
 
     // Stats rápidos
-    const counts = { todos: orders.length };
+    const counts = { todos: orders.length, pendiente_confirmacion: 0 };
     ADMIN_STAGES.forEach(s => { counts[s.key] = 0; });
-    orders.forEach(o => { counts[currentStageKey(o)] = (counts[currentStageKey(o)] || 0) + 1; });
+    orders.forEach(o => {
+      if (!isOrderConfirmed(o)) counts.pendiente_confirmacion++;
+      else counts[currentStageKey(o)] = (counts[currentStageKey(o)] || 0) + 1;
+    });
 
-    // Filtros (chips)
+    // Filtros (chips). El primero "Por confirmar" lista los que el cliente
+    // envió y aún no procesamos — el resto cubre el timeline de envío.
     const filters = [
-      { key: 'todos',         label: 'Todos',          icon: 'bi-layers' },
-      { key: 'confirmado',    label: 'Confirmados',    icon: 'bi-check-circle' },
-      { key: 'preparacion',   label: 'En preparación', icon: 'bi-box-seam' },
-      { key: 'internacional', label: 'Internacional',  icon: 'bi-airplane-engines' },
-      { key: 'aduana',        label: 'Aduana',         icon: 'bi-building-check' },
-      { key: 'nacional',      label: 'Nacional',       icon: 'bi-truck' },
-      { key: 'entregado',     label: 'Entregados',     icon: 'bi-bag-check-fill' }
+      { key: 'todos',                  label: 'Todos',          icon: 'bi-layers' },
+      { key: 'pendiente_confirmacion', label: 'Por confirmar',  icon: 'bi-hourglass-split' },
+      { key: 'confirmado',             label: 'Confirmados',    icon: 'bi-check-circle' },
+      { key: 'preparacion',            label: 'En preparación', icon: 'bi-box-seam' },
+      { key: 'internacional',          label: 'Internacional',  icon: 'bi-airplane-engines' },
+      { key: 'aduana',                 label: 'Aduana',         icon: 'bi-building-check' },
+      { key: 'nacional',               label: 'Nacional',       icon: 'bi-truck' },
+      { key: 'entregado',              label: 'Entregados',     icon: 'bi-bag-check-fill' }
     ];
     if (filtersEl) {
       filtersEl.innerHTML = filters.map(f => {
@@ -1917,9 +1955,14 @@
     }
 
     // Lista filtrada
-    const visible = (adminOrdersFilter === 'todos')
-      ? orders
-      : orders.filter(o => currentStageKey(o) === adminOrdersFilter);
+    let visible;
+    if (adminOrdersFilter === 'todos') {
+      visible = orders;
+    } else if (adminOrdersFilter === 'pendiente_confirmacion') {
+      visible = orders.filter(o => !isOrderConfirmed(o));
+    } else {
+      visible = orders.filter(o => isOrderConfirmed(o) && currentStageKey(o) === adminOrdersFilter);
+    }
 
     if (!visible.length) {
       listEl.innerHTML = `
@@ -1964,19 +2007,78 @@
         if (window.showToast) window.showToast('Pedido eliminado', 'info');
       });
     });
+    // Botón "Confirmar pedido" — solo aparece para los pedidos pendientes
+    listEl.querySelectorAll('[data-admin-order-confirm]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const { email, orderId } = btn.dataset;
+        confirmOrder(email, orderId);
+        renderAdminOrders();
+        if (window.showToast) window.showToast('Pedido confirmado. El cliente ya lo verá en su cuenta.', 'success');
+      });
+    });
   }
 
   function renderAdminOrder(o) {
     const d = new Date(o.createdAt || Date.now());
     const date = d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
     const time = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-    const activeKey = currentStageKey(o);
-    const activeIdx = ADMIN_STAGES.findIndex(s => s.key === activeKey);
-    const manual = !!o.stageKey;
+    const confirmed = isOrderConfirmed(o);
     const itemsPreview = (o.items || []).slice(0, 3).map(it =>
       `<img src="${escapeHtml(it.imagen || '')}" alt="" title="${escapeHtml(it.nombre)}" onerror="this.style.visibility='hidden'">`
     ).join('');
     const moreItems = (o.items || []).length > 3 ? `<span class="admin-order-more">+${o.items.length - 3}</span>` : '';
+
+    // Header común
+    const header = `
+      <header class="admin-order-card-head">
+        <div>
+          <div class="admin-order-card-id">${escapeHtml(o.id)}${
+            confirmed ? '' : ' <span class="admin-tag-custom admin-tag-pending">Por confirmar</span>'
+          }</div>
+          <div class="admin-order-card-meta">
+            <i class="bi bi-person-circle"></i> ${escapeHtml(o._email)}
+            <span class="admin-order-card-sep">·</span>
+            ${date} ${time}
+          </div>
+        </div>
+        <div class="admin-order-card-total">
+          <span class="admin-order-card-preview">${itemsPreview}${moreItems}</span>
+          <strong>S/ ${Number(o.total || 0).toFixed(2)}</strong>
+        </div>
+      </header>`;
+
+    // Pedido pendiente: NO mostramos timeline; solo botón Confirmar (+ eliminar).
+    if (!confirmed) {
+      return `
+        <article class="admin-order-card admin-order-card-pending">
+          ${header}
+          <div class="admin-order-pending-body">
+            <i class="bi bi-hourglass-split"></i>
+            <div>
+              <strong>Esperando tu confirmación</strong>
+              <span>El cliente envió el pedido por WhatsApp. Confírmalo cuando hayas validado pago / stock — recién entonces aparecerá en su cuenta y arrancará el timeline de envío.</span>
+            </div>
+          </div>
+          <footer class="admin-order-card-foot">
+            <button class="admin-btn-primary" type="button"
+                    data-admin-order-confirm
+                    data-email="${escapeHtml(o._email)}"
+                    data-order-id="${escapeHtml(o.id)}">
+              <i class="bi bi-check2-circle"></i> Confirmar pedido
+            </button>
+            <button class="admin-btn-icon" type="button"
+                    data-admin-order-delete
+                    data-email="${escapeHtml(o._email)}"
+                    data-order-id="${escapeHtml(o.id)}"
+                    aria-label="Eliminar pedido"><i class="bi bi-trash3"></i></button>
+          </footer>
+        </article>`;
+    }
+
+    // Pedido confirmado: timeline de envío
+    const activeKey = currentStageKey(o);
+    const activeIdx = ADMIN_STAGES.findIndex(s => s.key === activeKey);
+    const manual = !!o.stageKey;
 
     const stepsHtml = ADMIN_STAGES.map((s, i) => {
       let state = 'pending';
@@ -1993,21 +2095,7 @@
 
     return `
       <article class="admin-order-card">
-        <header class="admin-order-card-head">
-          <div>
-            <div class="admin-order-card-id">${escapeHtml(o.id)}</div>
-            <div class="admin-order-card-meta">
-              <i class="bi bi-person-circle"></i> ${escapeHtml(o._email)}
-              <span class="admin-order-card-sep">·</span>
-              ${date} ${time}
-            </div>
-          </div>
-          <div class="admin-order-card-total">
-            <span class="admin-order-card-preview">${itemsPreview}${moreItems}</span>
-            <strong>S/ ${Number(o.total || 0).toFixed(2)}</strong>
-          </div>
-        </header>
-
+        ${header}
         <div class="admin-order-stages-wrap">
           <div class="admin-order-stages-label">
             Avance del envío

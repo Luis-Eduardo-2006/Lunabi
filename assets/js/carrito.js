@@ -138,18 +138,20 @@
     const brandsMap = (typeof window !== 'undefined' && Array.isArray(window.brands)) ? window.brands : [];
     let totalAhorro = 0;
 
-    /* Glifos BMP escritos como literales UTF-8 — sin String.fromCodePoint,
-     * sin surrogate pairs, así no hay forma de que se rompan en la URL. */
+    /* Solo glifos BMP no-emoji — familia visual coherente con main.js. */
     const E = {
-      sparkle: '✨',
-      heart:   '❤️',
-      arrow:   '→',
-      flower:  '❀'
+      moon:    '☾',   // saludo (luna — identidad Lünabi)
+      flower:  '❀',   // sign-off (segunda mitad de la marca)
+      bullet:  '✿',   // cada producto del pedido
+      arrow:   '➜',   // precio antes ➜ precio nuevo (flecha decorativa)
+      down:    '↓',   // -X% (porcentaje de descuento)
+      prize:   '★',   // ahorro total (premio/logro)
+      diamond: '❖'    // TOTAL A PAGAR (valor final)
     };
 
     const greeting = (typeof window.buildGreeting === 'function')
       ? window.buildGreeting('pedido')
-      : `\u00A1Hola L\u00FCnabi! ${E.sparkle}\nQuiero hacer un pedido`;
+      : `\u00A1Hola L\u00FCnabi! ${E.moon}\nQuiero hacer un pedido`;
 
     let msg = `${greeting}\n\n${sep}\n\n`;
     msg += `*Mi pedido* \u2014 ${totalItems} ${totalItems === 1 ? 'producto' : 'productos'}\n`;
@@ -162,13 +164,13 @@
       const tieneDesc = p.precioAntes && p.precioAntes > p.precio;
       if (tieneDesc) totalAhorro += (p.precioAntes - p.precio) * item.qty;
 
-      msg += `\n${E.flower} *${idx + 1}. ${p.nombre}*\n`;
+      msg += `\n${E.bullet} *${idx + 1}. ${p.nombre}*\n`;
       if (brand) msg += `Marca: ${brand.nombre}\n`;
       msg += `C\u00F3digo: ${codigo}\n`;
-      msg += `Cantidad: ${item.qty} ${item.qty > 1 ? 'unidades' : 'unidad'}\n`;
+      msg += `Cantidad: \u00D7${item.qty} ${item.qty > 1 ? 'unidades' : 'unidad'}\n`;
       if (tieneDesc) {
         const pct = Math.round((p.precioAntes - p.precio) / p.precioAntes * 100);
-        msg += `Precio: ~S/ ${p.precioAntes.toFixed(2)}~ ${E.arrow} *S/ ${p.precio.toFixed(2)}* (-${pct}%)\n`;
+        msg += `Precio: ~S/ ${p.precioAntes.toFixed(2)}~ ${E.arrow} *S/ ${p.precio.toFixed(2)}* ${E.down} -${pct}%\n`;
       } else {
         msg += `Precio: S/ ${p.precio.toFixed(2)} c/u\n`;
       }
@@ -176,11 +178,11 @@
     });
 
     msg += `\n${sep}\n\n`;
-    if (totalAhorro > 0) msg += `Ahorro total: *S/ ${totalAhorro.toFixed(2)}* ${E.sparkle}\n`;
-    msg += `*TOTAL A PAGAR: S/ ${getCartTotal().toFixed(2)}*\n\n`;
+    if (totalAhorro > 0) msg += `${E.prize} Ahorro total: *S/ ${totalAhorro.toFixed(2)}*\n`;
+    msg += `${E.diamond} *TOTAL A PAGAR: S/ ${getCartTotal().toFixed(2)}*\n\n`;
     msg += `${sep}\n\n`;
     msg += `\u00BFPueden confirmarme la *disponibilidad* y coordinar el *env\u00EDo*?\n\n`;
-    msg += `\u00A1Muchas gracias! ${E.heart}`;
+    msg += `\u00A1Muchas gracias! ${E.flower}`;
     return msg;
   }
 
@@ -263,14 +265,36 @@
     }
   }
 
+  /* Devuelve true si hay sesión activa. Si no, muestra un toast y abre el
+   * modal de login. Lo usamos como gate antes de enviar el pedido — la
+   * consulta general (botón flotante) NO usa este gate. */
+  function requireSessionForCheckout() {
+    let user = null;
+    try {
+      if (typeof window.getCurrentUser === 'function') user = window.getCurrentUser();
+      if (!user) {
+        const raw = localStorage.getItem('lunabi_session');
+        user = raw ? JSON.parse(raw) : null;
+      }
+    } catch (e) { user = null; }
+    if (user) return true;
+    showToast('Inicia sesión para enviar tu pedido', 'info');
+    if (typeof window.openAuthModal === 'function') window.openAuthModal('login');
+    return false;
+  }
+
   function sendWhatsAppOrder() {
     if (!cart.length) return;
+    if (!requireSessionForCheckout()) return;
     toggleCartWaPicker(true);
   }
 
   /* Llamado cuando el usuario clickea una de las dos opciones del picker
-   * inline. Registra el pedido y abre WhatsApp con el número elegido. */
+   * inline. Registra el pedido, abre WhatsApp con el número elegido y
+   * vacía el carrito (el snapshot ya quedó persistido en el historial). */
   function finalizeOrder(waKey) {
+    // Re-chequea sesión por si alguien cerró sesión con el picker abierto.
+    if (!requireSessionForCheckout()) return;
     const numbers = window.WA_NUMBERS || {};
     const n = (numbers[waKey] && numbers[waKey].number) || window.WA_NUMBER || '';
     // Si el número aún es placeholder (51YYYYYYYYY), avisamos y no abrimos WA.
@@ -285,8 +309,14 @@
       window.recordSales(cart);
     }
     window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`, '_blank');
-    // Colapsamos el picker para la próxima vez
+
+    // Colapsamos el picker, vaciamos el carrito (queda guardado en el historial
+    // de pedidos) y cerramos el drawer. Sin esto, el siguiente "agregar al
+    // carrito" sumaba qty al pedido anterior porque cart seguía en memoria.
     toggleCartWaPicker(false);
+    clearCart();
+    closeCart();
+    showToast('Pedido enviado. Carrito vaciado.', 'success');
   }
 
   function initCart() {

@@ -10,6 +10,24 @@
  */
 
 /* ---------- BASE NAVBAR ---------- */
+/* Navbar STICKY que sigue al scroll y queda ENCIMA de todo el contenido
+ * (z-index alto). Funciona en celular, tablet y PC. */
+.navbar-glass.fixed-top,
+.navbar-glass.navbar-expand-lg.fixed-top {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1030;
+}
+
+/* IMPORTANTE: el navbar vive dentro de un wrapper <div id="navbar-container">
+ * que tiene altura igual al navbar. Sticky se ancla al PADRE — si el padre
+ * solo mide lo del navbar, sticky no tiene rango para seguir al scroll.
+ * `display: contents` hace que el wrapper sea ignorado para layout y el
+ * navbar quede directo en el body, permitiendo que sticky se ancle al body
+ * (que sí tiene la altura completa de la página) y siga al scroll. */
+#navbar-container {
+  display: contents;
+}
 .navbar-glass {
   background: var(--nav-glass-bg) !important;
   backdrop-filter: blur(20px) saturate(180%);
@@ -121,15 +139,48 @@ body.dark .navbar-glass .navbar-nav {
 }
 body.dark .navbar-glass .nav-link.active::after { background: var(--p-pink-soft); }
 
-/* Dropdown-toggle caret — uses Bootstrap's default CSS triangle + rotate on hover */
-.navbar-glass .nav-link.dropdown-toggle::after {
-  margin-left: 5px;
-  border-top-width: 4px;
-  vertical-align: middle;
-  transition: transform 0.2s ease;
+/* Caret button — botón separado del <a> para que en móvil el clic en el texto
+ * navegue y el clic en el chevron abra/cierre el dropdown. La rotación se
+ * controla SOLO por aria-expanded, así el estado abierto/cerrado siempre
+ * coincide entre desktop (hover gestionado por JS) y móvil (click). */
+.navbar-glass .nav-caret {
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  margin-left: 2px;
+  color: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.22s ease, color 0.22s ease;
 }
-.navbar-glass .nav-item.dropdown:hover .nav-link.dropdown-toggle::after {
-  transform: rotate(180deg);
+.navbar-glass .nav-caret i {
+  display: inline-block;
+  /* Cubic-bezier estándar Material — más fluido que ease, comunica mejor
+   * la transición de "abrir" y "cerrar". */
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+/* Una sola fuente de verdad: aria-expanded. JS lo cambia en hover (desktop)
+ * y click (mobile). Al rotar 180° el chevron-down apunta hacia arriba. */
+.navbar-glass .nav-caret[aria-expanded="true"] i {
+  transform: rotate(-180deg);
+}
+.navbar-glass .nav-caret[aria-expanded="true"] {
+  background: rgba(104,42,191,0.08);
+  color: var(--p-purple-vibrant);
+}
+body.dark .navbar-glass .nav-caret[aria-expanded="true"] {
+  background: rgba(247,198,249,0.12);
+  color: var(--p-pink-soft);
+}
+.navbar-glass .nav-caret:focus-visible {
+  outline: 2px solid var(--p-purple-vibrant);
+  outline-offset: 2px;
 }
 
 /* Sale badge inside its nav-link */
@@ -173,6 +224,10 @@ body.dark .navbar-glass .nav-link.active::after { background: var(--p-pink-soft)
   grid-auto-flow: row;
   gap: 0.25rem;
   list-style: none;
+  /* Aunque el navbar tiene z-index 1 (queda detrás del contenido al scrollear),
+   * los dropdowns SÍ deben aparecer por encima del contenido cuando se abren —
+   * por eso z-index alto. */
+  z-index: 1100;
 }
 body.dark .mega-dropdown-menu.dropdown-menu {
   background: rgba(18,8,30,0.97);
@@ -570,13 +625,21 @@ body.dark .navbar-glass .nav-cart .badge {
   .navbar-glass .navbar-brand .marca-nombre { font-size: 1.35rem; }
   .navbar-glass .navbar-brand img { height: 36px; }
 
-  /* Fondo opaco del menú expandido */
+  /* Fondo opaco del menú expandido + scroll interno propio.
+   * Como el navbar es sticky con top:0 y la cabecera mide ~64-72px, el menú
+   * abierto se limita a la altura del viewport menos esa cabecera. Si tiene
+   * más items de los que caben, scrollea internamente — sin que el body de
+   * atrás se mueva (porque su `overflow:auto` captura el evento). */
   .navbar-glass .navbar-collapse {
     margin-top: 0.8rem;
     padding: 0.8rem 1rem;
     border-top: 1px solid var(--nav-glass-border);
     background: rgba(242,242,242,0.98);
     border-radius: 0 0 16px 16px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   body.dark .navbar-glass .navbar-collapse {
     background: rgba(18,8,30,0.98);
@@ -597,13 +660,38 @@ body.dark .navbar-glass .nav-cart .badge {
   body.dark .navbar-glass .nav-link { color: #D9B7FF; }
   .navbar-glass .nav-link.active::after { display: none; }
 
-  /* Caret del dropdown-toggle: rota 180° cuando .open */
-  .navbar-glass .nav-link.dropdown-toggle::after {
-    margin-left: auto;
-    transition: transform 0.25s ease;
+  /* En móvil, el .nav-link ocupa el ancho disponible y el .nav-caret se
+   * pone al final del row para diferenciar visualmente el área tappeable
+   * de navegación vs. la del toggle. */
+  .navbar-glass .nav-item.dropdown {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
   }
-  .navbar-glass .nav-item.dropdown.open > .nav-link.dropdown-toggle::after {
+  .navbar-glass .nav-item.dropdown > .nav-link {
+    flex: 1 1 auto;
+  }
+  .navbar-glass .nav-caret {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+  .navbar-glass .nav-caret:active {
+    background: rgba(104,42,191,0.08);
+  }
+  body.dark .navbar-glass .nav-caret:active {
+    background: rgba(247,198,249,0.12);
+  }
+  .navbar-glass .nav-item.dropdown.open > .nav-caret i {
     transform: rotate(180deg);
+  }
+  /* En móvil el dropdown-menu necesita ocupar TODO el ancho del nav-item,
+   * incluyendo los 44px del caret. Reset del flex-basis para que pase
+   * a la siguiente "fila" del flex container. */
+  .navbar-glass .nav-item.dropdown > .dropdown-menu {
+    flex-basis: 100%;
   }
 
   /* ---------- LEVEL 1: .mega-dropdown-menu (Skincare categorías, etc.) ---------- */

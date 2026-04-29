@@ -21,7 +21,7 @@ window.WA_NUMBERS = {
     icon:   'bi-geo-alt-fill'
   },
   nacional: {
-    number: '51YYYYYYYYY',
+    number: '51906745624',
     label:  'Envíos nacionales',
     hint:   'Otras regiones del Perú — pedido anticipado',
     icon:   'bi-truck'
@@ -53,21 +53,19 @@ window.productCode = function(p) {
   return `LUN-${String(p.id).padStart(4, '0')}`;
 };
 
-/* Emojis — SOLO codepoints del BMP (U+0000–U+FFFF, una sola code unit).
- * Los emojis "tradicionales" (luna, corazón morado, carrito, etc.) viven en
- * U+1F000+ y necesitan surrogate pairs; algunos handlers de URL en Windows
- * (WhatsApp Desktop, deeplinks) rompen los surrogate pairs convirtiéndolos
- * en U+FFFD (�). Por eso escribimos los glifos como literales UTF-8 en el
- * archivo, sin String.fromCodePoint — el archivo es UTF-8 y los chars son
- * todos del BMP, así que no hay forma de que se rompan. */
+/* Solo glifos BMP no-emoji — chars decorativos monocromos (sin surrogate
+ * pairs, sin emoji-presentation). Familia visual coherente: floretes,
+ * estrellas y diamantes que siempre llegan limpios a WhatsApp. */
 const E = {
-  sparkle: '✨',                    // ✨  — colorful en WhatsApp
-  heart:   '❤️',              // ❤️ — colorful con VS-16
-  arrow:   '→',                    // →
-  flower:  '❀',                    // ❀
-  star:    '★'                     // ★
+  moon:     '☾',   // U+263E  saludo "Hola Lünabi" (luna — identidad de marca)
+  flower:   '❀',   // U+2740  sign-off "Gracias" (mariposa-flor — segunda mitad de la marca)
+  bullet:   '✿',   // U+273F  cada producto del pedido
+  arrow:    '➜',   // U+279C  precio antes ➜ precio nuevo (flecha decorativa)
+  down:     '↓',   // U+2193  -X% (porcentaje de descuento, "bajó")
+  prize:    '★',   // U+2605  ahorro total (premio/logro)
+  diamond:  '❖'    // U+2756  TOTAL A PAGAR (valor final)
 };
-const SEP = '━'.repeat(14);        // ━━━━━━━━━━━━━━
+const SEP = '━'.repeat(14);
 
 /* Saludo con el nombre del comprador (si está logueado) — primer nombre,
  * en mayúscula. Si no hay sesión, saludo genérico. El segundo emoji depende
@@ -83,11 +81,16 @@ window.buildGreeting = function(context) {
     }
   } catch (e) { /* sin sesión */ }
   const cap = nombre ? nombre.charAt(0).toUpperCase() + nombre.slice(1).toLowerCase() : '';
-  const intro = `\u00A1Hola L\u00FCnabi! ${E.sparkle}`;
+  const intro = `\u00A1Hola L\u00FCnabi! ${E.moon}`;
   if (context === 'pedido') {
     return cap
       ? `${intro}\nSoy *${cap}* y quiero hacer un pedido`
       : `${intro}\nQuiero hacer un pedido`;
+  }
+  if (context === 'info') {
+    return cap
+      ? `${intro}\nSoy *${cap}* y me gustar\u00EDa m\u00E1s informaci\u00F3n`
+      : `${intro}\nMe gustar\u00EDa m\u00E1s informaci\u00F3n`;
   }
   return cap
     ? `${intro}\nSoy *${cap}* y me interesa este producto`
@@ -108,20 +111,35 @@ window.buildProductWhatsAppMsg = function(p, qty) {
   const total = p.precio * cantidad;
 
   let msg = `${window.buildGreeting('producto')}\n\n${SEP}\n\n`;
-  msg += `${E.flower} *${p.nombre}*\n`;
+  msg += `${E.bullet} *${p.nombre}*\n`;
   if (brand) msg += `Marca: ${brand.nombre}\n`;
   msg += `C\u00F3digo: ${codigo}\n`;
-  msg += `Cantidad: ${cantidad} ${cantidad > 1 ? 'unidades' : 'unidad'}\n`;
+  msg += `Cantidad: \u00D7${cantidad} ${cantidad > 1 ? 'unidades' : 'unidad'}\n`;
   if (tieneDesc) {
-    msg += `Precio: ~S/ ${p.precioAntes.toFixed(2)}~ ${E.arrow} *S/ ${p.precio.toFixed(2)}* (-${pct}%)\n`;
-    msg += `Total: *S/ ${total.toFixed(2)}*\n`;
+    msg += `Precio: ~S/ ${p.precioAntes.toFixed(2)}~ ${E.arrow} *S/ ${p.precio.toFixed(2)}* ${E.down} -${pct}%\n`;
+    msg += `${E.diamond} Total: *S/ ${total.toFixed(2)}*\n`;
   } else {
     msg += `Precio: *S/ ${p.precio.toFixed(2)}*\n`;
-    if (cantidad > 1) msg += `Total: *S/ ${total.toFixed(2)}*\n`;
+    if (cantidad > 1) msg += `${E.diamond} Total: *S/ ${total.toFixed(2)}*\n`;
   }
   msg += `\n${SEP}\n\n`;
   msg += `\u00BFPodr\u00EDan confirmarme la *disponibilidad* y coordinar el *env\u00EDo*?\n\n`;
-  msg += `\u00A1Gracias! ${E.heart}`;
+  msg += `\u00A1Gracias! ${E.flower}`;
+  return msg;
+};
+
+/* Mensaje WhatsApp para una consulta general (bot\u00F3n flotante / footer / etc.).
+ * Mismo estilo que el de producto/pedido pero sin items espec\u00EDficos \u2014 se usa
+ * cuando la clienta solo quiere preguntar / pedir asesor\u00EDa. */
+window.buildInfoWhatsAppMsg = function() {
+  let msg = `${window.buildGreeting('info')}\n\n${SEP}\n\n`;
+  msg += `Quer\u00EDa consultarles sobre:\n`;
+  msg += `${E.bullet} *Productos disponibles*\n`;
+  msg += `${E.bullet} *Promociones del momento*\n`;
+  msg += `${E.bullet} *Asesor\u00EDa seg\u00FAn mi tipo de piel*\n`;
+  msg += `\n${SEP}\n\n`;
+  msg += `\u00BFPodr\u00EDan orientarme, por favor?\n\n`;
+  msg += `\u00A1Gracias! ${E.flower}`;
   return msg;
 };
 
@@ -161,7 +179,12 @@ document.addEventListener('click', (e) => {
   const trigger = t.closest('.whatsapp-float, .lu-wa-link');
   if (!trigger) return;
   e.preventDefault();
-  window.openWhatsApp('');
+  // Mensaje pre-cargado de "consulta general" — la clienta puede editarlo
+  // antes de enviarlo si quiere agregar más detalle.
+  const msg = (typeof window.buildInfoWhatsAppMsg === 'function')
+    ? window.buildInfoWhatsAppMsg()
+    : '';
+  window.openWhatsApp(msg);
 }, true);
 
 /* ================================================================ */
@@ -196,12 +219,22 @@ document.addEventListener('click', (e) => {
     });
   }
 
+  /* Combina ventas GLOBALES (campo `ventas` que viene de Supabase vía la vista
+   * v_products, agregada de la tabla `sales` de TODOS los usuarios) con las
+   * ventas LOCALES del usuario actual (localStorage). Las ventas locales se
+   * sincronizan a Supabase via record_sale RPC, así que normalmente están
+   * reflejadas en el global — pero las sumamos por si la sincronización
+   * acaba de ocurrir y la vista aún no se refrescó. */
+  function getProductSalesQty(p, localSales) {
+    return Number(p.ventas) || Number(localSales[p.id]) || 0;
+  }
+
   function recomputeBestSellers() {
     captureOriginalFlags();
     const ps = window.products || [];
     if (!ps.length) return;
-    const sales = loadSales();
-    const withSales = ps.filter(p => (Number(sales[p.id]) || 0) > 0);
+    const localSales = loadSales();
+    const withSales = ps.filter(p => getProductSalesQty(p, localSales) > 0);
     if (!withSales.length) {
       // Sin ventas aún → respeta los masVendido originales de data.js
       ps.forEach(p => { p.masVendido = !!originalFlags[p.id]; });
@@ -211,7 +244,7 @@ document.addEventListener('click', (e) => {
     const K = Math.max(3, Math.min(8, Math.ceil(ps.length * 0.15)));
     const topIds = new Set(
       [...withSales]
-        .sort((a, b) => (Number(sales[b.id]) || 0) - (Number(sales[a.id]) || 0))
+        .sort((a, b) => getProductSalesQty(b, localSales) - getProductSalesQty(a, localSales))
         .slice(0, K)
         .map(p => p.id)
     );
@@ -219,7 +252,15 @@ document.addEventListener('click', (e) => {
   }
 
   window.getSalesMap = loadSales;
-  window.getProductSales = (id) => Number(loadSales()[Number(id)]) || 0;
+  window.getProductSales = (id) => {
+    const n = Number(id);
+    if (!n) return 0;
+    // Prioridad: campo global `ventas` desde Supabase (en window.products),
+    // fallback a localStorage del usuario actual.
+    const p = (window.products || []).find(pr => pr.id === n);
+    if (p && p.ventas != null) return Number(p.ventas) || 0;
+    return Number(loadSales()[n]) || 0;
+  };
 
   window.recordSales = function(items) {
     if (!Array.isArray(items) || !items.length) return;
@@ -385,32 +426,62 @@ function initNavbarScroll() {
 function initMobileNav() {
   const isMobile = () => window.matchMedia('(max-width: 991.98px)').matches;
 
-  /* Level 1: top-level dropdown toggles (Skincare, Maquillaje, Corporal, Marcas).
-   * En mobile, tap suprime la navegación del <a> y alterna .open en el <li>.
-   * En desktop (isMobile false) dejamos pasar para que el href funcione. */
-  document.querySelectorAll('.navbar-glass .nav-item.dropdown > .nav-link.dropdown-toggle').forEach(link => {
-    link.addEventListener('click', (e) => {
-      if (!isMobile()) return;
+  /* Helper: abre/cierra un .nav-item.dropdown actualizando aria-expanded
+   * (la fuente de verdad para el caret) y la clase .open (que abre el panel).
+   * Cierra cualquier otro item al mismo nivel para que solo haya 1 abierto. */
+  function setItemOpen(item, open) {
+    if (!item) return;
+    const btn = item.querySelector(':scope > .nav-caret');
+    item.classList.toggle('open', !!open);
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) item.querySelectorAll('.mega-item.open').forEach(m => m.classList.remove('open'));
+  }
+  function closeOtherSiblings(item) {
+    document.querySelectorAll('.navbar-glass .nav-item.dropdown.open').forEach(el => {
+      if (el !== item) setItemOpen(el, false);
+    });
+  }
+
+  /* Level 1: top-level dropdowns (Skincare, Maquillaje, Corporal, Marcas).
+   * Cada item tiene UN <a class="nav-link"> con href real + UN <button class="nav-caret">
+   * con el chevron. El <a> siempre navega; el <button> abre/cierra. Funciona
+   * igual en desktop, tablet y móvil — el comportamiento es predecible. */
+  document.querySelectorAll('.navbar-glass .nav-item.dropdown > .nav-caret').forEach(btn => {
+    btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const item = link.closest('.nav-item.dropdown');
+      e.stopPropagation();
+      const item = btn.closest('.nav-item.dropdown');
       if (!item) return;
       const wasOpen = item.classList.contains('open');
+      closeOtherSiblings(item);
+      setItemOpen(item, !wasOpen);
+    });
+  });
 
-      /* Cerrar cualquier otro top-level abierto (un solo nivel-1 a la vez) */
-      document.querySelectorAll('.navbar-glass .nav-item.dropdown.open').forEach(el => {
-        if (el !== item) {
-          el.classList.remove('open');
-          el.querySelectorAll('.mega-item.open').forEach(m => m.classList.remove('open'));
-        }
-      });
-
-      if (wasOpen) {
-        item.classList.remove('open');
-        item.querySelectorAll('.mega-item.open').forEach(m => m.classList.remove('open'));
-      } else {
-        item.classList.add('open');
+  /* En desktop, cuando el cursor entra/sale del .nav-item.dropdown,
+   * sincronizamos aria-expanded para que el caret rote igual que con click.
+   * (En móvil no hay hover, así que esto no se dispara). */
+  document.querySelectorAll('.navbar-glass .nav-item.dropdown').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      if (isMobile()) return;
+      const btn = item.querySelector(':scope > .nav-caret');
+      if (btn) btn.setAttribute('aria-expanded', 'true');
+    });
+    item.addEventListener('mouseleave', () => {
+      if (isMobile()) return;
+      // Solo "des-rotar" si no fue abierto explícitamente con click
+      if (!item.classList.contains('open')) {
+        const btn = item.querySelector(':scope > .nav-caret');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
       }
     });
+  });
+
+  /* Cierra el menú abierto al hacer clic afuera (mobile y desktop). */
+  document.addEventListener('click', (e) => {
+    if (!e.target || !e.target.closest) return;
+    if (e.target.closest('.navbar-glass .nav-item.dropdown')) return;
+    document.querySelectorAll('.navbar-glass .nav-item.dropdown.open').forEach(el => setItemOpen(el, false));
   });
 
   /* Level 2: mega-headers con subs (Limpieza, Mascarillas, Rostro, …).
@@ -432,12 +503,20 @@ function initMobileNav() {
     });
   });
 
-  /* Reset completo al cerrar la hamburguesa — cada apertura empieza limpia. */
+  /* Bloqueamos el scroll del body cuando la hamburguesa móvil está abierta —
+   * solo el menú scrollea. Y al cerrarse, reset de todos los .open para que
+   * la próxima apertura empiece limpia. */
   const navCollapse = document.getElementById('navContent');
   if (navCollapse) {
+    navCollapse.addEventListener('show.bs.collapse', () => {
+      document.body.classList.add('lu-nav-open');
+    });
     navCollapse.addEventListener('hidden.bs.collapse', () => {
+      document.body.classList.remove('lu-nav-open');
       document.querySelectorAll('.navbar-glass .nav-item.dropdown.open, .navbar-glass .mega-item.open')
         .forEach(el => el.classList.remove('open'));
+      document.querySelectorAll('.navbar-glass .nav-caret[aria-expanded="true"]')
+        .forEach(b => b.setAttribute('aria-expanded', 'false'));
     });
   }
 
@@ -447,6 +526,9 @@ function initMobileNav() {
     if (!isMobile()) {
       document.querySelectorAll('.navbar-glass .nav-item.dropdown.open, .navbar-glass .mega-item.open')
         .forEach(el => el.classList.remove('open'));
+      document.querySelectorAll('.navbar-glass .nav-caret[aria-expanded="true"]')
+        .forEach(b => b.setAttribute('aria-expanded', 'false'));
+      document.body.classList.remove('lu-nav-open');
     }
   });
 }
@@ -604,6 +686,7 @@ function initEffects() {
 /* ================================================================ */
 /* HERO CAROUSEL HEADLINE ANIMATION                                 */
 /* ================================================================ */
+window.initHero = initHero;
 function initHero() {
   const carousel = document.getElementById('heroBannerCarousel');
   if (!carousel) return;
@@ -697,15 +780,34 @@ function initHero() {
   function animateHeadline() {
     const activeSlide = carousel.querySelector('.carousel-item.active .hero-headline');
     if (!activeSlide) return;
-    const text = activeSlide.textContent;
+    const text = (activeSlide.textContent || '').trim();
     activeSlide.innerHTML = '';
-    [...text].forEach((char, i) => {
-      const span = document.createElement('span');
-      span.className = 'char';
-      span.textContent = char === ' ' ? '\u00A0' : char;
-      span.style.transitionDelay = `${i * 0.03}s`;
-      activeSlide.appendChild(span);
+
+    // Partimos por espacios y conservamos los separadores. Cada palabra va en
+    // un .word que es inline-block (no se rompe internamente), y entre palabras
+    // dejamos espacios de texto plano para que S\u00CD se permita saltar de l\u00EDnea
+    // por palabra completa cuando no alcance el ancho del slide.
+    const tokens = text.split(/(\s+)/);
+    let charIdx = 0;
+    tokens.forEach(tok => {
+      if (!tok) return;
+      if (/^\s+$/.test(tok)) {
+        activeSlide.appendChild(document.createTextNode(' '));
+        return;
+      }
+      const wordSpan = document.createElement('span');
+      wordSpan.className = 'word';
+      [...tok].forEach(ch => {
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.textContent = ch;
+        span.style.transitionDelay = `${charIdx * 0.03}s`;
+        wordSpan.appendChild(span);
+        charIdx++;
+      });
+      activeSlide.appendChild(wordSpan);
     });
+
     requestAnimationFrame(() => {
       activeSlide.querySelectorAll('.char').forEach(c => c.classList.add('visible'));
     });

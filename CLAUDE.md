@@ -230,7 +230,7 @@ Los 3 tabs de la ficha de producto (`#productModal` y `producto.html`) tienen:
 
 ### Contacto
 
-- **5 canales** en cards con color de marca: Facebook (`#1877F2`), Messenger, WhatsApp, Instagram (gradient clásico), TikTok (fondo negro con glitch turquesa/rosa), correo (morado Lünabi).
+- **Canales** en cards con color de marca: Facebook (`#1877F2`), WhatsApp Huancayo y Nacional, Instagram (gradient clásico), TikTok (fondo negro con glitch turquesa/rosa), correo (morado Lünabi).
 - **Footer** también lleva iconos WhatsApp, Instagram, Facebook, TikTok (el de WA abre el picker Huancayo/Nacional).
 
 ## Backend (Supabase) — DESPLEGADO

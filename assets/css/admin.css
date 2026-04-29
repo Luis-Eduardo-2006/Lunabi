@@ -2338,3 +2338,38 @@ body.dark .admin-stage-pill.is-current {
   .admin-swatch { width: 22px; height: 22px; }
   .admin-pos-picker { width: 120px; }
 }
+
+/* ===== Pedidos: estado "Por confirmar" (admin) ===== */
+.admin-tag-pending {
+  background: linear-gradient(135deg, #F5C06E, #E5A53E);
+  color: #5a3500;
+}
+body.dark .admin-tag-pending {
+  background: rgba(245,192,110,0.25);
+  color: #F5C06E;
+}
+.admin-order-card-pending {
+  border: 1.5px dashed rgba(245,192,110,0.6);
+  background: linear-gradient(135deg, rgba(245,192,110,0.08), transparent 60%);
+}
+.admin-order-pending-body {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  margin: 0.5rem 0 1rem;
+  background: rgba(245,192,110,0.1);
+  border-radius: 12px;
+}
+.admin-order-pending-body > i {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #F5C06E, #E5A53E);
+  color: #5a3500;
+  font-size: 1.4rem;
+  display: grid; place-items: center;
+}
+.admin-order-pending-body > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.admin-order-pending-body strong { color: var(--text-heading); font-size: 0.95rem; }
+.admin-order-pending-body span { color: var(--text-muted); font-size: 0.82rem; line-height: 1.45; }
