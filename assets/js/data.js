@@ -5,8 +5,7 @@
  *   1. Admin overrides desde localStorage (ediciones offline).
  *   2. Rehidratación remota desde Supabase al cargar si LuApi.isRemote().
  *
- * Si necesitas sembrar productos, usa el panel admin (`admin.html`)
- * o el scraper local (`scripts/scrape-yesstyle.js --import`). */
+ * Si necesitas sembrar productos, usa el panel admin (`admin.html`). */
 
 const brands   = [];
 const products = [];
@@ -63,10 +62,14 @@ window.__baseBrandMaxId   = brands.reduce((m, b) => Math.max(m, b.id), 0);
         window.LuApi.listBrands(),
         window.LuApi.listSlides ? window.LuApi.listSlides() : Promise.resolve([])
       ]);
-      if (Array.isArray(remoteBrands) && remoteBrands.length) {
+      // En modo remoto Supabase es la fuente de verdad: si responde con
+      // un array (incluso vacío), reemplazamos lo local. Antes se requería
+      // que length>0 para evitar borrar caché en errores transitorios, pero
+      // eso impedía que un catálogo intencionalmente vacío se reflejara.
+      if (Array.isArray(remoteBrands)) {
         brands.splice(0, brands.length, ...remoteBrands);
       }
-      if (Array.isArray(remoteProducts) && remoteProducts.length) {
+      if (Array.isArray(remoteProducts)) {
         products.splice(0, products.length, ...remoteProducts);
       }
       // Slides del carrusel: cacheamos las slides remotas en localStorage para

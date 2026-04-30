@@ -578,14 +578,26 @@
     }
     if (cart) cart.innerHTML = CART_HTML;
 
-    // Populate the Marcas dropdown with one link per brand
-    const marcasDrop = document.getElementById('marcasDropMenu');
-    if (marcasDrop && typeof brands !== 'undefined' && Array.isArray(brands)) {
-      marcasDrop.innerHTML = brands.map(b =>
-        `<li><a class="dropdown-item" href="marca-detalle.html?marca=${b.slug}">${b.nombre}</a></li>`
-      ).join('');
-    }
+    populateMarcasDropdown();
   }
+
+  /* Pinta el dropdown de Marcas del navbar con la lista actual.
+   * Se llama dos veces: al inyectar el navbar (con lo que data.js cargó
+   * desde localStorage), y otra vez cuando data.js dispara
+   * `lunabi:data-ready` tras rehidratar desde Supabase. Sin la 2da
+   * llamada el dropdown queda con marcas viejas/locales aunque la BD
+   * tenga otra lista. */
+  function populateMarcasDropdown() {
+    const marcasDrop = document.getElementById('marcasDropMenu');
+    if (!marcasDrop) return;
+    const list = (typeof brands !== 'undefined' && Array.isArray(brands)) ? brands : [];
+    marcasDrop.innerHTML = list.length
+      ? list.map(b =>
+          `<li><a class="dropdown-item" href="marca-detalle.html?marca=${b.slug}">${b.nombre}</a></li>`
+        ).join('')
+      : '<li><span class="dropdown-item-text text-muted small">Sin marcas disponibles</span></li>';
+  }
+  document.addEventListener('lunabi:data-ready', populateMarcasDropdown);
 
   /* Carga síncrona-temprana de Supabase config + api.js. IMPORTANTE:
    * los scripts inyectados dinámicamente son async por defecto (ejecutan

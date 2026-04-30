@@ -358,6 +358,16 @@ body.dark .admin-latest-price { color: var(--p-pink-soft); }
   border-color: var(--p-purple-deep);
   box-shadow: 0 0 0 3px rgba(159,132,230,0.22);
 }
+/* Pareja input + select para campos compuestos como Contenido (50 + ml) */
+.admin-input-pair {
+  display: grid;
+  grid-template-columns: 1fr 90px;
+  gap: 8px;
+}
+.admin-input-pair input,
+.admin-input-pair select {
+  width: 100%;
+}
 body.dark .admin-field input:focus,
 body.dark .admin-field select:focus,
 body.dark .admin-field textarea:focus {
@@ -644,6 +654,9 @@ body.dark .admin-btn-ghost:hover { color: var(--p-pink-soft); border-color: var(
   border-bottom: 1px solid var(--card-border);
   vertical-align: middle;
 }
+/* Altura uniforme de filas — evita que un logo más alto o un nombre con
+ * caracteres altos (como "+") empuje la fila y rompa la rejilla visual. */
+.admin-table tbody tr { height: 64px; }
 .admin-table thead th {
   background: rgba(159,132,230,0.08);
   color: var(--text-heading);
@@ -689,12 +702,21 @@ body.dark .admin-tag-edit {
 }
 
 /* Columna de acciones: íconos alineados */
+/* Antes usaba `display: flex` directamente sobre el <td>, lo que provoca
+ * inconsistencias de layout entre navegadores (el rendimiento de flex en
+ * table-cell varía). Usar inline-flex sobre los hijos y nowrap sobre la
+ * celda mantiene los botones alineados sin alterar la altura de la fila. */
 .admin-td-actions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
+  white-space: nowrap;
+  text-align: right;
 }
+.admin-td-actions .admin-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+.admin-td-actions .admin-btn-icon + .admin-btn-icon { margin-left: 6px; }
 
 /* Botón específico de editar (morado vivo) — se diferencia del de eliminar */
 .admin-btn-icon.admin-btn-edit {
@@ -1904,13 +1926,22 @@ body.dark .admin-editor-modal .modal-title i {
 }
 .admin-editor-frame:hover .admin-editor-drag-hint { opacity: 1; }
 
-/* Marco circular para el slot de marca (overlay con mask) */
+/* Marco circular para el slot de marca (overlay con mask).
+ * La sombra debe alinearse con la línea punteada del ::before (que tiene
+ * margin: 3px sobre el frame). Usamos `closest-side` para que el 100% del
+ * gradient = mitad del lado más corto del frame (W/2). El stop a 97%
+ * coincide visualmente con la dashed (radio = W/2 - 3px, ≈ 98.7% para
+ * frames de 480px). Tinte morado al 38% para que se vea lo recortado
+ * sin tapar el logo. */
 .admin-editor-modal.editor-slot-brand .admin-editor-frame::after {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at center, transparent 0, transparent calc(50% - 1px), rgba(0,0,0,0.72) calc(50% + 0px));
+    radial-gradient(circle closest-side at center,
+      transparent 0%,
+      transparent 97%,
+      rgba(26,15,46,0.38) 98%);
   pointer-events: none;
   z-index: 2;
 }

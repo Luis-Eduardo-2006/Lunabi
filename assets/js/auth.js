@@ -127,6 +127,39 @@
     if (typeof showToast === 'function') showToast('Sesión cerrada', 'info');
   }
 
+  /* Cambio de contraseña.
+   * - Modo remoto (Supabase): re-autentica con la pass actual para verificar
+   *   identidad, y luego actualiza con auth.updateUser.
+   * - Modo local: verifica el hash actual contra el guardado y reemplaza. */
+  async function changePassword({ currentPassword, newPassword, confirm }) {
+    if (!currentPassword) throw new Error('Ingresa tu contraseña actual.');
+    if (!newPassword || newPassword.length < 6) throw new Error('La contraseña nueva debe tener al menos 6 caracteres.');
+    if (newPassword !== confirm) throw new Error('La nueva contraseña y su confirmación no coinciden.');
+    if (newPassword === currentPassword) throw new Error('La contraseña nueva debe ser distinta a la actual.');
+
+    const session = getCurrentUser();
+    if (!session || !session.email) throw new Error('Necesitas haber iniciado sesión.');
+
+    if (isRemote()) {
+      // Re-autenticación: signIn con la pass actual antes de poder cambiarla.
+      // Si la pass es incorrecta, signIn lanza error y abortamos.
+      try { await window.LuApi.signIn({ email: session.email, password: currentPassword }); }
+      catch (e) { throw new Error('Tu contraseña actual no es correcta.'); }
+      try { await window.LuApi.updatePassword(newPassword); }
+      catch (e) { throw new Error(e.message || 'No se pudo cambiar la contraseña.'); }
+      return true;
+    }
+
+    const users = loadUsers();
+    const idx = users.findIndex(u => u.email === session.email);
+    if (idx === -1) throw new Error('No encontramos tu cuenta local.');
+    const currentHash = await hashPassword(currentPassword, session.email);
+    if (currentHash !== users[idx].passwordHash) throw new Error('Tu contraseña actual no es correcta.');
+    users[idx].passwordHash = await hashPassword(newPassword, session.email);
+    saveUsers(users);
+    return true;
+  }
+
   /* ---------------- MODAL HELPERS (con fallback a páginas standalone) ---------- */
   /* openAuthModal:
    *   - Si el #authModal está inyectado en la página actual → lo abre (UX modal).
@@ -372,4 +405,5 @@
   window.getCurrentUser   = getCurrentUser;
   window.logoutUser       = logoutUser;
   window.openAuthModal    = openAuthModal;
+  window.changePassword   = changePassword;
 })();

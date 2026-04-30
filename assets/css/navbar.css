@@ -1,4 +1,4 @@
-/* ===== LÜNABI — Navbar (Bootstrap navbar + glassmorphism estilo.txt) =====
+/* ===== LÜNABI — Navbar (Bootstrap navbar + glassmorphism) =====
  *
  * Estructura:
  *   - Bootstrap .navbar.navbar-expand-lg.fixed-top con clase propia .navbar-glass
@@ -12,19 +12,27 @@
 /* ---------- BASE NAVBAR ---------- */
 /* Navbar STICKY que sigue al scroll y queda ENCIMA de todo el contenido
  * (z-index alto). Funciona en celular, tablet y PC. */
+/* Antes el navbar era position:sticky, lo cual fallaba en algunos casos
+ * (parents con overflow:hidden cuando el menú está abierto, edge cases
+ * de Edge/Safari, etc.). Con position:fixed siempre queda anclado al
+ * viewport y la usuaria nunca lo pierde al hacer scroll. */
 .navbar-glass.fixed-top,
 .navbar-glass.navbar-expand-lg.fixed-top {
-  position: sticky !important;
+  position: fixed !important;
   top: 0 !important;
+  left: 0;
+  right: 0;
   z-index: 1030;
 }
 
-/* IMPORTANTE: el navbar vive dentro de un wrapper <div id="navbar-container">
- * que tiene altura igual al navbar. Sticky se ancla al PADRE — si el padre
- * solo mide lo del navbar, sticky no tiene rango para seguir al scroll.
- * `display: contents` hace que el wrapper sea ignorado para layout y el
- * navbar quede directo en el body, permitiendo que sticky se ancle al body
- * (que sí tiene la altura completa de la página) y siga al scroll. */
+/* Como ahora es fixed, el navbar sale del flujo del documento. Compensamos
+ * con padding-top en body igual a la altura real medida (--lu-nav-h, set
+ * por main.js en runtime). Sin esto, el contenido inicial de cada página
+ * quedaría tapado por el navbar. */
+body {
+  padding-top: var(--lu-nav-h, 110px);
+}
+
 #navbar-container {
   display: contents;
 }
@@ -126,18 +134,46 @@ body.dark .navbar-glass .navbar-nav {
 .navbar-glass .nav-link.active {
   background: var(--nav-link-hover-bg);
 }
-.navbar-glass .nav-link.active::after {
+/* Subrayado animado — visible al hover, foco, página activa o submenú abierto.
+ * Default: barrita centrada bajo el texto. Al activarse: viaja hacia la
+ * derecha con una media vuelta (180°). El gradient hace que la rotación
+ * sea visible (la cabeza opaca queda a la izquierda y al rotar pasa a la
+ * derecha). */
+.navbar-glass .nav-link::after {
   content: "";
   position: absolute;
   bottom: 3px;
   left: 50%;
-  transform: translateX(-50%);
-  width: 18px;
-  height: 2px;
+  width: 22px;
+  height: 3px;
   background: var(--p-purple-deep);
-  border-radius: 1px;
+  border-radius: 2px;
+  transform: translateX(-50%) rotate(0deg);
+  opacity: 0;
+  pointer-events: none;
+  transition: left 0.45s cubic-bezier(.4,0,.2,1),
+              transform 0.45s cubic-bezier(.4,0,.2,1),
+              opacity 0.28s ease;
 }
-body.dark .navbar-glass .nav-link.active::after { background: var(--p-pink-soft); }
+/* Página activa: línea visible y centrada, SIN animar. Es el indicador
+ * estático de "estás aquí". */
+.navbar-glass .nav-link.active::after {
+  opacity: 1;
+  left: 50%;
+  transform: translateX(-50%) rotate(0deg);
+}
+
+/* Submenú abierto: la línea viaja a la derecha con media vuelta. Tiene mayor
+ * especificidad que la regla de .active gracias al :has(), así que cuando la
+ * usuaria está en una página con submenú y lo abre, la animación gana. */
+.navbar-glass .nav-item:has(.nav-caret[aria-expanded="true"]) > .nav-link::after {
+  opacity: 1;
+  left: calc(100% - 16px);
+  transform: translateX(-50%) rotate(180deg);
+}
+body.dark .navbar-glass .nav-link::after {
+  background: var(--p-pink-soft);
+}
 
 /* Caret button — botón separado del <a> para que en móvil el clic en el texto
  * navegue y el clic en el chevron abra/cierre el dropdown. La rotación se
@@ -622,24 +658,43 @@ body.dark .navbar-glass .nav-cart .badge {
  * Level 2 (.mega-sub-panel):    colapsado max-height 0; abre con .open.
  */
 @media (max-width: 991.98px) {
+  /* CRÍTICO: en móvil, `backdrop-filter` en .navbar-glass crea un
+   * containing block para hijos position:fixed (regla de la spec CSS).
+   * Eso hacía que el menú con position:fixed se anclara al box original
+   * del navbar (en la posición del documento) en lugar del viewport,
+   * provocando que apareciera al inicio del documento al hacer scroll.
+   * Quitamos el blur en móvil — el fondo ya es opaco al 96% por lo que
+   * visualmente la diferencia es imperceptible. */
+  .navbar-glass {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   .navbar-glass .navbar-brand .marca-nombre { font-size: 1.35rem; }
   .navbar-glass .navbar-brand img { height: 36px; }
 
-  /* Fondo opaco del menú expandido + scroll interno propio.
-   * Como el navbar es sticky con top:0 y la cabecera mide ~64-72px, el menú
-   * abierto se limita a la altura del viewport menos esa cabecera. Si tiene
-   * más items de los que caben, scrollea internamente — sin que el body de
-   * atrás se mueva (porque su `overflow:auto` captura el evento). */
+  /* Menú móvil flotando sobre el contenido, NO empujándolo hacia abajo.
+   * Usamos `position: fixed` (no absolute) porque el navbar es sticky:
+   * con sticky, los hijos position:absolute se anclan a la posición
+   * ORIGINAL del navbar en el documento, no a la pegada al viewport.
+   * Con fixed, el menú queda anclado al top del viewport sin importar
+   * el scroll, justo bajo la cabecera del navbar. */
   .navbar-glass .navbar-collapse {
-    margin-top: 0.8rem;
+    position: fixed;
+    top: var(--lu-nav-h, 110px);
+    left: 0;
+    right: 0;
+    margin: 0;
     padding: 0.8rem 1rem;
     border-top: 1px solid var(--nav-glass-border);
     background: rgba(242,242,242,0.98);
     border-radius: 0 0 16px 16px;
-    max-height: calc(100vh - 80px);
+    max-height: calc(100vh - var(--lu-nav-h, 110px));
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    box-shadow: 0 14px 32px rgba(40,20,70,0.18);
+    z-index: 1050;
   }
   body.dark .navbar-glass .navbar-collapse {
     background: rgba(18,8,30,0.98);
@@ -658,6 +713,7 @@ body.dark .navbar-glass .nav-cart .badge {
     border-radius: 10px;
   }
   body.dark .navbar-glass .nav-link { color: #D9B7FF; }
+  .navbar-glass .nav-link::after,
   .navbar-glass .nav-link.active::after { display: none; }
 
   /* En móvil, el .nav-link ocupa el ancho disponible y el .nav-caret se

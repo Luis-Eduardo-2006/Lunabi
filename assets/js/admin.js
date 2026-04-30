@@ -444,17 +444,32 @@
   /* ---------- SLIDES (expuesto al home) ---------- */
   window.getAdminSlides = function() { return load(STORE_SLIDES); };
 
-  /* ---------- TABS ---------- */
+  /* ---------- TABS ----------
+   * Persistimos la pestaña activa en sessionStorage para que al recargar
+   * la página la admin se quede en la misma sección. Sin esto, el scroll
+   * restaurado por main.js apuntaba a la posición de "Marcas" pero el
+   * panel volvía a "Dashboard", terminando en una posición incorrecta. */
   function initTabs() {
+    const KEY = 'lunabi_admin_tab';
     const btns = document.querySelectorAll('.admin-tab');
     const panels = document.querySelectorAll('.admin-panel');
+    function activate(key) {
+      btns.forEach(x => x.classList.toggle('active', x.dataset.tab === key));
+      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === key));
+    }
     btns.forEach(b => {
       b.addEventListener('click', () => {
         const key = b.dataset.tab;
-        btns.forEach(x => x.classList.toggle('active', x === b));
-        panels.forEach(p => p.classList.toggle('active', p.dataset.panel === key));
+        activate(key);
+        try { sessionStorage.setItem(KEY, key); } catch (e) {}
       });
     });
+    try {
+      const saved = sessionStorage.getItem(KEY);
+      if (saved && document.querySelector(`.admin-tab[data-tab="${saved}"]`)) {
+        activate(saved);
+      }
+    } catch (e) {}
   }
 
   /* ---------- DASHBOARD ---------- */
@@ -937,6 +952,9 @@
       }, 0);
       form.querySelector('[name="precio"]').value = p.precio || '';
       form.querySelector('[name="precioAntes"]').value = p.precioAntes || '';
+      form.querySelector('[name="contenidoValor"]').value = p.contenidoValor || '';
+      const unidadSelect = form.querySelector('[name="contenidoUnidad"]');
+      if (unidadSelect) unidadSelect.value = p.contenidoUnidad || 'ml';
       form.querySelectorAll('[name="tipoPiel"]').forEach(cb => {
         cb.checked = Array.isArray(p.tipoPiel) && p.tipoPiel.includes(cb.value);
       });
@@ -975,6 +993,13 @@
       const precioAntesRaw = parseFloat(fd.get('precioAntes'));
       const precioAntes = (precioAntesRaw && precioAntesRaw > precio) ? precioAntesRaw : null;
 
+      // Contenido (opcional): valor + unidad. Si la usuaria no llena el
+      // valor, ambos campos quedan en null para no ensuciar el JSON con
+      // datos vacíos.
+      const contenidoValorRaw = parseFloat(fd.get('contenidoValor'));
+      const contenidoValor = (contenidoValorRaw && contenidoValorRaw > 0) ? contenidoValorRaw : null;
+      const contenidoUnidad = contenidoValor ? (fd.get('contenidoUnidad') || 'ml') : null;
+
       const tipoPiel = Array.from(form.querySelectorAll('[name="tipoPiel"]:checked')).map(cb => cb.value);
       const marca = fd.get('marca');
       const categoria = fd.get('categoria');
@@ -989,9 +1014,24 @@
         return;
       }
 
-      // Slug único: ignorar self cuando estamos editando.
+      // Bloquear duplicados: misma marca + mismo nombre normalizado.
+      // Antes el código añadía un sufijo "-2", "-3" silenciosamente, lo que
+      // permitía publicar el mismo producto múltiples veces sin avisar.
+      // Ahora si ya existe ese par (marca, nombre) se aborta y se notifica.
       const all = window.products || [];
       const base = slugify(nombre) || `producto-${all.length + 1}`;
+      const dup = all.find(p =>
+        p.id !== editingProductId &&
+        p.marca === marca &&
+        slugify(p.nombre || '') === base
+      );
+      if (dup) {
+        if (window.showToast) {
+          window.showToast(`Ya tienes "${nombre}" registrado para esa marca`, 'info');
+        }
+        return;
+      }
+      // Slug único final (por si acaso colisiona con otro producto de otra marca)
       let slug = base, n = 2;
       while (all.some(p => p.slug === slug && p.id !== editingProductId)) slug = `${base}-${n++}`;
       slugInput.value = slug;
@@ -1005,6 +1045,8 @@
         tipoPiel,
         precio,
         precioAntes,
+        contenidoValor,
+        contenidoUnidad,
         imagenes: imgs,
         descripcion: (fd.get('descripcion') || '').trim(),
         modoDeUso:  splitLines(fd.get('modoDeUso')),
@@ -1717,9 +1759,13 @@
       const nombre = (fd.get('nombre') || '').trim();
       const slug = (fd.get('slug') || slugify(nombre)).trim();
       if (!nombre || !slug) return;
-      // Validar slug único, ignorando self cuando editamos
+      // Bloquear duplicados de marca por nombre normalizado (slug).
+      // Como slugify quita acentos/mayúsculas/espacios, "Dr. Althea" y
+      // "DR ALTHEA" colisionan y se rechazan correctamente.
       if ((window.brands || []).some(b => b.slug === slug && b.id !== editingBrandId)) {
-        if (window.showToast) window.showToast('Ya existe una marca con ese slug', 'info');
+        if (window.showToast) {
+          window.showToast(`Ya tienes una marca llamada "${nombre}" registrada`, 'info');
+        }
         return;
       }
       const common = {

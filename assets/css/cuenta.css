@@ -722,6 +722,52 @@ body.dark .cuenta-rutina-step-price { color: var(--p-pink-soft); }
   border-color: #e53e6b;
 }
 
+/* Formulario de cambio de contraseña en la tab Perfil */
+.cuenta-pass-form {
+  display: grid;
+  gap: 0.75rem;
+}
+.cuenta-pass-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cuenta-pass-field > span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+}
+.cuenta-pass-field input {
+  background: var(--input-bg, rgba(255,255,255,0.6));
+  border: 1px solid var(--input-border, rgba(159,132,230,0.3));
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.22s, box-shadow 0.22s;
+}
+.cuenta-pass-field input:focus {
+  border-color: var(--p-purple-deep);
+  box-shadow: 0 0 0 3px rgba(159,132,230,0.22);
+}
+body.dark .cuenta-pass-field input:focus {
+  border-color: var(--p-pink-soft);
+  box-shadow: 0 0 0 3px rgba(247,198,249,0.22);
+}
+.cuenta-pass-error {
+  margin: 0;
+  min-height: 1.1em;
+  color: #e53e6b;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.cuenta-pass-form button[type="submit"] {
+  align-self: flex-start;
+}
+
 /* ============================================================
  * SEGUIMIENTO DE ENVÍO — timeline con 2 tramos (int + nac)
  * ============================================================ */

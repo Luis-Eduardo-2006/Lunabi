@@ -12,14 +12,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,700;0,900&family=Syne:wght@700;800&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20260429i">
-  <link rel="stylesheet" href="assets/css/navbar.css?v=20260429i">
-  <link rel="stylesheet" href="assets/css/footer.css?v=20260429i">
-  <link rel="stylesheet" href="assets/css/cards.css?v=20260429i">
-  <link rel="stylesheet" href="assets/css/modal.css?v=20260429i">
-  <link rel="stylesheet" href="assets/css/carrito.css?v=20260429i">
-  <link rel="stylesheet" href="assets/css/auth.css?v=20260429i">
-  <link rel="stylesheet" href="assets/css/admin.css?v=20260429i">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260429j">
+  <link rel="stylesheet" href="assets/css/navbar.css?v=20260429j">
+  <link rel="stylesheet" href="assets/css/footer.css?v=20260429j">
+  <link rel="stylesheet" href="assets/css/cards.css?v=20260429j">
+  <link rel="stylesheet" href="assets/css/modal.css?v=20260429j">
+  <link rel="stylesheet" href="assets/css/carrito.css?v=20260429j">
+  <link rel="stylesheet" href="assets/css/auth.css?v=20260429j">
+  <link rel="stylesheet" href="assets/css/admin.css?v=20260429j">
 </head>
 <body data-page="admin">
 
@@ -220,7 +220,7 @@
               <h2 class="admin-panel-title">Productos</h2>
               <p class="admin-hint">Añade productos al catálogo con toda su clasificación. Los productos quedan guardados en el navegador (localStorage) y se muestran en toda la tienda.</p>
 
-              <form id="productForm" class="admin-form" method="post" action="#" novalidate>
+              <form id="productForm" class="admin-form" method="post" action="#">
                 <h3 class="admin-form-title"><i class="bi bi-plus-circle"></i> Nuevo producto</h3>
 
                 <div class="admin-grid-2">
@@ -252,6 +252,17 @@
                   <label class="admin-field">
                     <span>Precio antes (opcional)</span>
                     <input type="number" name="precioAntes" step="0.01" min="0" placeholder="Para mostrar descuento">
+                  </label>
+                  <label class="admin-field">
+                    <span>Contenido (opcional)</span>
+                    <div class="admin-input-pair">
+                      <input type="number" name="contenidoValor" step="0.01" min="0" placeholder="Ej. 50">
+                      <select name="contenidoUnidad" aria-label="Unidad del contenido">
+                        <option value="ml">ml</option>
+                        <option value="g">g</option>
+                      </select>
+                    </div>
+                    <small class="admin-hint-inline">Volumen o peso del envase. Se mostrará junto al precio.</small>
                   </label>
                 </div>
 
@@ -324,7 +335,7 @@
               <h2 class="admin-panel-title">Carrusel de inicio</h2>
               <p class="admin-hint">Cada diapositiva tiene imagen de fondo, título, descripción y botón con su texto y enlace. Cuando agregues diapositivas, reemplazarán al carrusel por defecto de la home.</p>
 
-              <form id="slideForm" class="admin-form" method="post" action="#" novalidate>
+              <form id="slideForm" class="admin-form" method="post" action="#">
                 <h3 class="admin-form-title"><i class="bi bi-plus-circle"></i> Nueva diapositiva</h3>
 
                 <div class="admin-field">
@@ -622,7 +633,7 @@
               <h2 class="admin-panel-title">Marcas</h2>
               <p class="admin-hint">Añade marcas nuevas para poder asignarlas a los productos y para que aparezcan en el mega-menú de Marcas.</p>
 
-              <form id="brandForm" class="admin-form" method="post" action="#" novalidate>
+              <form id="brandForm" class="admin-form" method="post" action="#">
                 <h3 class="admin-form-title"><i class="bi bi-plus-circle"></i> Nueva marca</h3>
                 <div class="admin-grid-2">
                   <label class="admin-field">
@@ -755,15 +766,15 @@
   </a>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/data.js?v=20260429i"></script>
-  <script src="assets/js/theme.js?v=20260429i"></script>
-  <script src="assets/js/carrito.js?v=20260429i"></script>
-  <script src="assets/js/buscador.js?v=20260429i"></script>
-  <script src="assets/js/filtros.js?v=20260429i"></script>
-  <script src="assets/js/router.js?v=20260429i"></script>
-  <script src="assets/js/components.js?v=20260429i"></script>
-  <script src="assets/js/auth.js?v=20260429i"></script>
-  <script src="assets/js/admin.js?v=20260429i"></script>
-  <script src="assets/js/main.js?v=20260429i"></script>
+  <script src="assets/js/data.js?v=20260429j"></script>
+  <script src="assets/js/theme.js?v=20260429j"></script>
+  <script src="assets/js/carrito.js?v=20260429j"></script>
+  <script src="assets/js/buscador.js?v=20260429j"></script>
+  <script src="assets/js/filtros.js?v=20260429j"></script>
+  <script src="assets/js/router.js?v=20260429j"></script>
+  <script src="assets/js/components.js?v=20260429j"></script>
+  <script src="assets/js/auth.js?v=20260429j"></script>
+  <script src="assets/js/admin.js?v=20260429j"></script>
+  <script src="assets/js/main.js?v=20260429j"></script>
 </body>
 </html>

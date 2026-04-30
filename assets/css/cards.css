@@ -187,6 +187,31 @@ body.dark .product-card .card-price { color: var(--p-pink-soft); }
   margin-right: 6px;
   font-weight: 400;
 }
+/* Chip de contenido (ej: "50 ml") junto al precio en cards y modales */
+.product-card .card-price .card-contenido {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 6px;
+  letter-spacing: 0.3px;
+}
+.modal-contenido,
+.producto-price .modal-contenido {
+  display: inline-block;
+  background: rgba(159,132,230,0.14);
+  color: var(--p-purple-deep);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.4px;
+}
+body.dark .modal-contenido {
+  background: rgba(247,198,249,0.18);
+  color: var(--p-pink-soft);
+}
 
 .product-card .btn-add {
   width: 100%;

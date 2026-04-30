@@ -1,14 +1,9 @@
 # MCP — contiene access token de Supabase, no commitear
 .mcp.json
 
-# Variables de entorno locales (scraper, etc.)
+# Variables de entorno locales
 .env
 .env.local
-scripts/.env
-
-# Dependencias del scraper
-scripts/node_modules/
-scripts/package-lock.json
 
 # Editores / SO
 .DS_Store

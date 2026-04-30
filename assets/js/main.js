@@ -385,6 +385,7 @@ window.renderProductCard = function(p, i = 0) {
           <div class="card-price">
             ${hasDiscount ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span>` : ''}
             S/ ${p.precio.toFixed(2)}
+            ${p.contenidoValor ? `<span class="card-contenido">· ${p.contenidoValor} ${p.contenidoUnidad || 'ml'}</span>` : ''}
           </div>
           <button class="btn-add ripple-wrap" type="button" onclick="event.stopPropagation(); addToCart(${p.id})">
             <i class="bi bi-cart-plus"></i> Agregar al carrito
@@ -410,7 +411,7 @@ window.observeFadeUps = function() {
 /* ================================================================ */
 /* NAVBAR BEHAVIOUR                                                 */
 /* ================================================================ */
-/* initNavbarScroll — glass darken on scroll (estilo.txt).
+/* initNavbarScroll — glass darken on scroll.
  * initMobileNav    — progressive disclosure on mobile: tap-to-toggle
  *                    level-1 (dropdown) and level-2 (mega-sub-panel)
  *                    via `.open` class. Desktop keeps hover behaviour.
@@ -423,8 +424,83 @@ function initNavbarScroll() {
   onScroll();
 }
 
+/* Persistencia del scroll entre recargas.
+ *
+ * El navegador intenta restaurar la posición automáticamente, pero el
+ * sitio rehidrata datos desde Supabase de forma async y el body tiene
+ * padding-top dinámico. El layout cambia DESPUÉS de la restauración, así
+ * que la usuaria termina cerca del top. Solución: guardar la posición
+ * por URL en sessionStorage y restaurarla cuando el contenido está listo
+ * (DOMContentLoaded + tras `lunabi:data-ready` por si llega tarde). */
+function initScrollRestore() {
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+  const KEY = 'lunabi_scroll_pos';
+  const urlKey = location.pathname + location.search;
+
+  function load() {
+    try { return JSON.parse(sessionStorage.getItem(KEY) || '{}'); }
+    catch (e) { return {}; }
+  }
+  function save(map) {
+    try { sessionStorage.setItem(KEY, JSON.stringify(map)); } catch (e) {}
+  }
+
+  // Persistimos cada ~300ms y al cerrar/recargar para no perder la última
+  let saveTimer = null;
+  window.addEventListener('scroll', () => {
+    if (saveTimer) return;
+    saveTimer = setTimeout(() => {
+      const map = load();
+      map[urlKey] = window.scrollY;
+      save(map);
+      saveTimer = null;
+    }, 300);
+  }, { passive: true });
+  window.addEventListener('beforeunload', () => {
+    const map = load();
+    map[urlKey] = window.scrollY;
+    save(map);
+  });
+
+  // Restauración: al primer paint (raf) y otra vez tras data-ready, porque
+  // las cards remotas pueden alargar la página después.
+  function restore() {
+    const map = load();
+    const y = map[urlKey];
+    if (typeof y === 'number' && y > 0) {
+      window.scrollTo({ top: y, left: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(restore));
+  } else {
+    requestAnimationFrame(restore);
+  }
+  document.addEventListener('lunabi:data-ready', () => requestAnimationFrame(restore));
+}
+
 function initMobileNav() {
   const isMobile = () => window.matchMedia('(max-width: 991.98px)').matches;
+
+  /* Mide la altura real del navbar y la expone como --lu-nav-h en :root.
+   * El menú móvil (.navbar-collapse) y los submenús flotantes usan esta
+   * variable para anclarse justo bajo la cabecera, sin importar si en
+   * móvil hay 2 filas (brand+toggler + utils) o si el usuario cambia
+   * de orientación. Re-mide en resize para mantener la sincronía. */
+  function updateNavHeight() {
+    const nav = document.querySelector('.navbar-glass');
+    if (!nav) return;
+    document.documentElement.style.setProperty('--lu-nav-h', `${nav.offsetHeight}px`);
+  }
+  updateNavHeight();
+  window.addEventListener('resize', updateNavHeight);
+  // Re-mide cuando se inyecta/oculta la utils row al alternar entre breakpoints
+  const ro = window.ResizeObserver ? new ResizeObserver(updateNavHeight) : null;
+  if (ro) {
+    const nav = document.querySelector('.navbar-glass');
+    if (nav) ro.observe(nav);
+  }
 
   /* Helper: abre/cierra un .nav-item.dropdown actualizando aria-expanded
    * (la fuente de verdad para el caret) y la clase .open (que abre el panel).
@@ -518,6 +594,42 @@ function initMobileNav() {
       document.querySelectorAll('.navbar-glass .nav-caret[aria-expanded="true"]')
         .forEach(b => b.setAttribute('aria-expanded', 'false'));
     });
+
+    /* Helper que obtiene/crea la instancia de Bootstrap Collapse. */
+    function hideCollapse() {
+      if (!window.bootstrap || !navCollapse.classList.contains('show')) return;
+      const inst = bootstrap.Collapse.getInstance(navCollapse)
+                 || new bootstrap.Collapse(navCollapse, { toggle: false });
+      inst.hide();
+    }
+
+    /* Cierra la hamburguesa al tocar fuera de ella (en móvil). Los toques
+     * en el toggler o dentro del propio menú no cuentan. Esto permite a la
+     * usuaria seguir navegando sin tener que presionar el botón otra vez. */
+    document.addEventListener('click', (e) => {
+      if (!isMobile()) return;
+      if (!navCollapse.classList.contains('show')) return;
+      if (!e.target || !e.target.closest) return;
+      if (e.target.closest('.navbar-collapse')) return;
+      if (e.target.closest('.navbar-toggler')) return;
+      hideCollapse();
+    });
+
+    /* Cierra automáticamente al elegir un link real (no el caret de
+     * dropdown ni los headers que solo abren subniveles). Sin esto, si
+     * el link va a la misma URL solo con query params distintos, la
+     * hamburguesa se queda abierta tras navegar. */
+    navCollapse.addEventListener('click', (e) => {
+      if (!isMobile()) return;
+      const link = e.target.closest('a[href]');
+      if (!link) return;
+      if (link.classList.contains('nav-caret')) return;
+      const href = link.getAttribute('href');
+      if (!href || href === '#' || href.startsWith('#')) return;
+      // Headers de mega-dropdown que solo despliegan subniveles (no navegan)
+      if (link.classList.contains('mega-header') && link.classList.contains('has-subs')) return;
+      hideCollapse();
+    });
   }
 
   /* Si el usuario gira el dispositivo o redimensiona pasando a desktop,
@@ -558,9 +670,11 @@ window.openProductModal = function(id) {
   const modalPct = hasDiscount
     ? Math.round((p.precioAntes - p.precio) / p.precioAntes * 100)
     : 0;
+  const contenidoChip = p.contenidoValor
+    ? `<span class="modal-contenido">${p.contenidoValor} ${p.contenidoUnidad || 'ml'}</span>` : '';
   document.getElementById('modalPrice').innerHTML = hasDiscount
-    ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}<span class="price-discount-pct">-${modalPct}%</span><span class="modal-save">AHORRA S/${(p.precioAntes - p.precio).toFixed(2)}</span>`
-    : `S/ ${p.precio.toFixed(2)}`;
+    ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}${contenidoChip}<span class="price-discount-pct">-${modalPct}%</span><span class="modal-save">AHORRA S/${(p.precioAntes - p.precio).toFixed(2)}</span>`
+    : `S/ ${p.precio.toFixed(2)}${contenidoChip}`;
 
   const mainImg = document.querySelector('#modalMainImg img');
   if (mainImg) { mainImg.src = p.imagenes[0]; mainImg.alt = p.nombre; }
@@ -959,6 +1073,20 @@ function renderMarcasPage() {
 function renderMarcaDetallePage() {
   const slug = getQueryParam('marca');
   if (!slug) { window.location.href = 'marcas.html'; return; }
+  // Race condition: si estamos en modo remoto y Supabase aún no ha
+  // respondido, brands está vacío y el .find() devuelve undefined, lo
+  // que provocaba un redirect prematuro a marcas.html. En su lugar
+  // esperamos al evento data-ready y volvemos a intentar. En modo
+  // offline brands se llena sincrónicamente desde localStorage, así
+  // que si está vacío realmente no hay nada que esperar.
+  if (!brands.length) {
+    const isRemote = window.LuApi && window.LuApi.isRemote && window.LuApi.isRemote();
+    if (isRemote) {
+      document.addEventListener('lunabi:data-ready', renderMarcaDetallePage, { once: true });
+      return;
+    }
+    window.location.href = 'marcas.html'; return;
+  }
   const brand = brands.find(b => b.slug === slug);
   if (!brand) { window.location.href = 'marcas.html'; return; }
 
@@ -1022,9 +1150,11 @@ function renderProductoPage() {
     const pct = hasDiscount
       ? Math.round((p.precioAntes - p.precio) / p.precioAntes * 100)
       : 0;
+    const cChip = p.contenidoValor
+      ? `<span class="modal-contenido">${p.contenidoValor} ${p.contenidoUnidad || 'ml'}</span>` : '';
     priceEl.innerHTML = hasDiscount
-      ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}<span class="price-discount-pct">-${pct}%</span><span class="modal-save">AHORRA S/${(p.precioAntes - p.precio).toFixed(2)}</span>`
-      : `S/ ${p.precio.toFixed(2)}`;
+      ? `<span class="old-price">S/ ${p.precioAntes.toFixed(2)}</span> S/ ${p.precio.toFixed(2)}${cChip}<span class="price-discount-pct">-${pct}%</span><span class="modal-save">AHORRA S/${(p.precioAntes - p.precio).toFixed(2)}</span>`
+      : `S/ ${p.precio.toFixed(2)}${cChip}`;
   }
 
   const tabInfo = document.getElementById('tabInfoPage');
@@ -1195,6 +1325,7 @@ function initApp() {
   if (typeof initAuth === 'function') initAuth();
   initNavbarScroll();
   initMobileNav();
+  initScrollRestore();
   initModal();
   initEffects();
   if (typeof setActiveNavLink === 'function') setActiveNavLink();

@@ -113,6 +113,13 @@
     try { localStorage.removeItem('lunabi_session'); } catch (e) {}
   }
 
+  async function updatePassword(newPassword) {
+    const client = await ensureSupabase();
+    if (!client) throw new Error('Supabase no configurado');
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }
+
   async function getUser() {
     const client = await ensureSupabase();
     if (!client) return null;
@@ -408,6 +415,8 @@
       categoria: product.categoria, subcategoria: product.subcategoria || null,
       tipo_piel: product.tipoPiel || [],
       precio: product.precio, precio_antes: product.precioAntes || null,
+      contenido_valor:  product.contenidoValor  || null,
+      contenido_unidad: product.contenidoUnidad || null,
       imagenes: product.imagenes || [],
       descripcion: product.descripcion || '',
       modo_de_uso: product.modoDeUso || [],
@@ -573,7 +582,7 @@
     // catálogo
     listProducts, listBrands, listSlides,
     // auth
-    signUp, signIn, signOut, getUser,
+    signUp, signIn, signOut, getUser, updatePassword,
     // favoritos
     listFavorites, toggleFavorite,
     // skintest

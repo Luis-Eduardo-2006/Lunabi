@@ -128,10 +128,6 @@
     return new URLSearchParams(window.location.search).get(name);
   }
 
-  function getAllParams() {
-    return new URLSearchParams(window.location.search);
-  }
-
   function getCurrentPage() {
     const path = window.location.pathname.split('/').pop() || 'index.html';
     const page = path.replace('.html', '');
@@ -175,7 +171,6 @@
   window.SUBCAT_LABELS = SUBCAT_LABELS;
   window.PAGES = PAGES;
   window.getQueryParam = getQueryParam;
-  window.getAllParams = getAllParams;
   window.getCurrentPage = getCurrentPage;
   window.setActiveNavLink = setActiveNavLink;
 })();

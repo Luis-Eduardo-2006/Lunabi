@@ -61,7 +61,7 @@
   --nav-h-top:    0px;
   --nav-h-bot:    0px;
 
-  /* Glass navbar tokens (estilo.txt frost effect) */
+  /* Glass navbar tokens (frost effect) */
   --nav-glass-bg:         rgba(255,255,255,0.35);
   --nav-glass-bg-scroll:  rgba(242,242,242,0.82);
   --nav-glass-border:     rgba(159,132,230,0.28);

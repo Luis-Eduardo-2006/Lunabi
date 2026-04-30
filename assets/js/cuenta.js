@@ -549,9 +549,29 @@
       </div>
       <div class="cuenta-profile-card">
         <div class="cuenta-panel-header" style="margin-bottom:0.6rem">
+          <h3 class="cuenta-panel-title" style="font-size:1rem"><i class="bi bi-shield-lock"></i> Cambiar contraseña</h3>
+        </div>
+        <form id="cuentaPassForm" class="cuenta-pass-form" autocomplete="off">
+          <label class="cuenta-pass-field">
+            <span>Contraseña actual</span>
+            <input type="password" name="currentPassword" required autocomplete="current-password" placeholder="Tu contraseña actual">
+          </label>
+          <label class="cuenta-pass-field">
+            <span>Nueva contraseña</span>
+            <input type="password" name="newPassword" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+          </label>
+          <label class="cuenta-pass-field">
+            <span>Confirmar nueva contraseña</span>
+            <input type="password" name="confirm" required minlength="6" autocomplete="new-password" placeholder="Repite la nueva contraseña">
+          </label>
+          <p class="cuenta-pass-error" role="alert"></p>
+          <button class="cuenta-btn-primary" type="submit"><i class="bi bi-check-lg"></i> Actualizar contraseña</button>
+        </form>
+      </div>
+      <div class="cuenta-profile-card">
+        <div class="cuenta-panel-header" style="margin-bottom:0.6rem">
           <h3 class="cuenta-panel-title" style="font-size:1rem"><i class="bi bi-gear"></i> Acciones</h3>
         </div>
-        <p class="cuenta-rutina-hint">Cuando conectemos el backend podrás cambiar nombre, email y contraseña desde aquí.</p>
         <div class="cuenta-profile-actions">
           <button class="cuenta-danger-btn" id="btnLogout" type="button"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
         </div>
@@ -567,17 +587,58 @@
       localStorage.removeItem('lunabi_session');
       window.location.href = 'index.html';
     });
+
+    // Cambio de contraseña: usa window.changePassword (auth.js) que ya
+    // resuelve modo remoto vs local. Mostramos errores inline + toast.
+    const passForm = document.getElementById('cuentaPassForm');
+    if (passForm) {
+      const errEl = passForm.querySelector('.cuenta-pass-error');
+      passForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (errEl) errEl.textContent = '';
+        const fd = new FormData(passForm);
+        const submitBtn = passForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+          await window.changePassword({
+            currentPassword: fd.get('currentPassword'),
+            newPassword:     fd.get('newPassword'),
+            confirm:         fd.get('confirm')
+          });
+          passForm.reset();
+          if (window.showToast) window.showToast('Contraseña actualizada', 'success');
+        } catch (ex) {
+          if (errEl) errEl.textContent = ex.message;
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      });
+    }
   }
 
-  /* ---------- TABS ---------- */
+  /* ---------- TABS ----------
+   * Persistimos la pestaña activa para que la usuaria pueda recargar y
+   * mantener la vista (Pedidos, Favoritos, Mi rutina o Perfil) sin saltar
+   * de regreso a Pedidos por defecto. */
   function initTabs() {
+    const KEY = 'lunabi_cuenta_tab';
     const tabs = document.querySelectorAll('.cuenta-tab');
     const panels = document.querySelectorAll('.cuenta-panel');
+    function activate(key) {
+      tabs.forEach(x => x.classList.toggle('active', x.dataset.cuentaTab === key));
+      panels.forEach(p => p.classList.toggle('active', p.dataset.cuentaPanel === key));
+    }
     tabs.forEach(t => t.addEventListener('click', () => {
       const key = t.dataset.cuentaTab;
-      tabs.forEach(x => x.classList.toggle('active', x === t));
-      panels.forEach(p => p.classList.toggle('active', p.dataset.cuentaPanel === key));
+      activate(key);
+      try { sessionStorage.setItem(KEY, key); } catch (e) {}
     }));
+    try {
+      const saved = sessionStorage.getItem(KEY);
+      if (saved && document.querySelector(`.cuenta-tab[data-cuenta-tab="${saved}"]`)) {
+        activate(saved);
+      }
+    } catch (e) {}
   }
 
   /* Si hay sesión activa, la usamos. Si no, armamos un perfil "Invitada"
